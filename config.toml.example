@@ -1,0 +1,3 @@
+[core]
+token = "" # put your token here
+prefix = "!" # enter the command prefix you would like to use

@@ -3,6 +3,7 @@ version: "3"
 services:
     db:
         image: postgres
+        restart: always
         ports:
             - 5432:5432
         environment:
@@ -13,7 +14,6 @@ services:
             - ~/docker/postgres:/var/lib/postgresql/data
     bot:
         build: .
-        command: ["./wait-for-postgres.sh", "db", "python", "app.py"]
         ports:
             - 81:81
         depends_on:

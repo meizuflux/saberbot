@@ -1,8 +1,8 @@
-FROM python:3.9.5
+FROM python:3.9:debian-buster-slim
 LABEL maintainer="ppotatoo"
 
-RUN apk update && apk upgrade
-RUN apk add --no-cache git make build-base linux-headers
+RUN apt update && apt upgrade
+RUN apt add --no-cache git make build-base linux-headers
 
 WORKDIR /src
 COPY . .

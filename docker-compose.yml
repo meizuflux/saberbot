@@ -1,26 +1,24 @@
 version: "3"
 
 services:
-    db:
+    db: # postgres service
         image: postgres
         restart: always
         ports:
             - 5432:5432
-        environment:
+        environment: #this sets the password and the name of the database, you can change these at will, just remember to change it in the code.
             - POSTGRES_PASSWORD=secret
-            - POSTGRES_USER=ppotatoo
             - POSTGRES_DB=bot
-        volumes:
+        volumes: # persistent storage
             - ~/docker/postgres:/var/lib/postgresql/data
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U ppotatoo -d bot"]
+        healthcheck: # this is a checker to make sure that the bot does not start before postgres is ready
+            test: ["CMD-SHELL", "pg_isready -U postgres -d bot"]
             interval: 5s
-            timeout: 5s
             retries: 5
-    bot:
+    bot: # the bot service
         build: .
         ports:
-            - 81:81
-        depends_on:
+            - 81:81 
+        depends_on: # this makes it so it fires after postgres is ready
             db:
-                condition: service-healthy
+                condition: service_healthy

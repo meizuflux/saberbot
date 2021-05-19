@@ -1,4 +1,4 @@
-FROM python:3.9.5-alpine
+FROM python:3.9.5
 LABEL maintainer="ppotatoo"
 
 RUN apk update && apk upgrade

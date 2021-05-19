@@ -1,0 +1,9 @@
+{
+    "apps": [
+      {
+        "name": "bot", // change this to whatever you want, it doesn't really matter.
+        "script": "bot",
+        "interpreter": "python" // you probably want to change this to match your system.
+      }
+    ]
+  }

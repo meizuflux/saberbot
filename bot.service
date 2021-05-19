@@ -1,0 +1,14 @@
+[Unit]
+Description=saberbot
+After=user.target 
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ppotatoo/saberbot # this is the directory of where you cloned the repo
+User=ppotatoo # IMPORTANT: change this to a NON root user. DO NOT RUN THE BOT ON ROOT USER
+Environment=PYTHONUNBUFFERED=1 # this is for logs to show properly
+ExecStart=/usr/bin/python3.9 /home/ppotatoo/saberbot/bot.py # this is an example. depending on what version of python you have installed and where you placed the file this will need to be changed
+Restart=always
+
+[Install]
+WantedBy=default.target # this is where your system is when it is done booting.

@@ -12,9 +12,15 @@ services:
             - POSTGRES_DB=bot
         volumes:
             - ~/docker/postgres:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
     bot:
         build: .
         ports:
             - 81:81
         depends_on:
-            - db
+            db:
+                condition: service-healthy

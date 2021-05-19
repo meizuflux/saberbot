@@ -16,7 +16,7 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
         self.loop = asyncio.get_event_loop()
         self.pool = self.loop.run_until_complete(
-            create_pool(port=5432, password='secret', database='bot', host='localhost', user='ppotatoo', loop=self.loop)
+            create_pool(port=5432, password='secret', database='bot', host='db', user='ppotatoo', loop=self.loop)
         )
 
     async def on_ready(self):

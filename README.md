@@ -1,5 +1,5 @@
-# saberbot
-discord bot for the cc discord server
+# SaberBot
+BeatSaber bot for the [Cube Community](https://cube.community) Discord
 
 ## Running the bot
 Instructions to run the bot

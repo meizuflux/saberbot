@@ -1,4 +1,6 @@
 import asyncio
+from pathlib import Path
+import toml
 import logging
 from discord.ext import commands
 from asyncpg import create_pool
@@ -17,9 +19,17 @@ class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.loop = asyncio.get_event_loop()
+
+        # the working directory for the bot, kinda hacky tho
+        self.working_directory = str(Path(__file__).parent.parent).replace("\\", "/") + "/"
+
+        # load config files
+        with open(self.working_directory + "config.toml") as f:
+            self.config = toml.loads(f.read())
+
         # create a database connection
         self.pool = self.loop.run_until_complete(
-            create_pool(port=5432, password='secret', database='bot', host='db', user='postgres', loop=self.loop)
+            create_pool(dsn=self.config['core']['postgres_dsn'], loop=self.loop)
         )
 
     async def on_ready(self):

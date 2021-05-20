@@ -39,7 +39,8 @@ class Bot(commands.Bot):
             "Username : {0}".format(self.user),
             "ID : {0.id}".format(self.user),
             f"Guilds : {len(self.guilds)}",
-            f"Users : {len(self.users)}"
+            f"Users : {len(self.users)}",
+            f"Command Prefix : {self.command_prefix}"
         )
         for msg in message:
             logger.info(msg)

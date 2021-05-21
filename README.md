@@ -37,11 +37,11 @@ Fill out the config.toml.example file. When you are done, make sure to remove th
 
 Simply run the bot with this command: 
 ```bash
-python3.9 bot
+python3.9 launch.py
 ```
 That's it. If you wish to change the prefix, add a `--prefix` flag when running as such:
 ```bash
-python3.9 bot --prefix "<enter your prefix>"
+python3.9 launch.py --prefix "<enter your prefix>"
 ```
 The prefix defaults to `!`
 

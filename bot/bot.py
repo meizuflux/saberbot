@@ -1,21 +1,24 @@
 import asyncio
-from pathlib import Path
-import toml
 import logging
-from discord.ext import commands
+from pathlib import Path
+
+import toml
 from asyncpg import create_pool
+from discord.ext import commands
 
 # setup logging so we know wtf is going on with the bot
 logger = logging.getLogger("bot")
 logging.basicConfig(
-    format="[{asctime}] {levelname:<7} {name}: {message}", # you can change formatting if you want
+    format="[{asctime}] {levelname:<7} {name}: {message}",  # you can change formatting if you want
     datefmt="%Y-%m-%d %H:%M:%S",
     style="{",
-    level=logging.INFO # change this to logging.DEBUG if something is going wrong during startup
+    level=logging.INFO  # change this to logging.DEBUG if something is going wrong during startup
 )
+
 
 class Bot(commands.Bot):
     """Subclassed bot for added functionality and cleaner code"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.loop = asyncio.get_event_loop()
@@ -31,6 +34,9 @@ class Bot(commands.Bot):
         self.pool = self.loop.run_until_complete(
             create_pool(dsn=self.config['core']['postgres_dsn'], loop=self.loop)
         )
+
+        # misc
+        self.api_url = "https://new.scoresaber.com/api"
 
     async def on_ready(self):
         """Lets us know when the bot is online. If you don't see this something went wrong"""

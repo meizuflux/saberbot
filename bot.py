@@ -1,8 +1,10 @@
 import asyncio
 import logging
+from os import getcwd
 from pathlib import Path
 
 import toml
+from aiohttp import ClientSession
 from asyncpg import create_pool
 from discord.ext import commands
 
@@ -24,7 +26,7 @@ class Bot(commands.Bot):
         self.loop = asyncio.get_event_loop()
 
         # the working directory for the bot, kinda hacky tho
-        self.working_directory = str(Path(__file__).parent.parent).replace("\\", "/") + "/"
+        self.working_directory = getcwd().replace("\\", "/") + "/"
 
         # load config files
         with open(self.working_directory + "config.toml") as f:
@@ -36,7 +38,16 @@ class Bot(commands.Bot):
         )
 
         # misc
-        self.api_url = "https://new.scoresaber.com/api"
+        self.session = ClientSession()
+
+    def load_extensions(self):
+        self.load_extension('jishaku')
+        extensions = [
+            'extensions.stats',
+            'extensions.errorhandler'
+        ]
+        for ext in extensions:
+            self.load_extension(ext)
 
     async def on_ready(self):
         """Lets us know when the bot is online. If you don't see this something went wrong"""
@@ -50,3 +61,7 @@ class Bot(commands.Bot):
         )
         for msg in message:
             logger.info(msg)
+
+    async def close(self):
+        await self.session.close()
+        await super().close()

@@ -8,7 +8,7 @@ from jishaku.functools import executor_function
 from matplotlib import ticker
 
 from bot import Bot
-from extensions.utils.scoresaber import ScoreSaberQueryConverter, get_profile
+from extensions.utils.scoresaber import ScoreSaberQueryConverter
 
 matplotlib.use('Agg')
 
@@ -16,7 +16,8 @@ matplotlib.use('Agg')
 @executor_function
 def generate_chart(data) -> BytesIO:
     history = [int(point) for point in data['history'].split(",")]
-    x_ticks = [num for num in range(len(history)) if num % 2 == 0]
+    history.append(data['rank'])
+    x_ticks = [num for num in range(len(history) + 2) if num % 2 == 0]
 
     fig, ax = plt.subplots()
 
@@ -27,10 +28,11 @@ def generate_chart(data) -> BytesIO:
     ax.set_ylabel('Rank', fontsize=25, labelpad=7)
 
     ax.invert_yaxis()
-    y_axis_diff = round(abs(history[0] - history[-1]) / 9)
+    sorted_history = sorted(history)
+    change = sorted_history[-1] - sorted_history[0]
+    y_axis_diff = round(abs(change) / 5)
     if y_axis_diff == 0:
         y_axis_diff += 1
-    print(y_axis_diff)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(y_axis_diff))
     plt.yticks(fontsize=20)
 
@@ -40,7 +42,7 @@ def generate_chart(data) -> BytesIO:
 
     ax.margins(x=0.01, y=0.02)
 
-    fig.set_figwidth(15)
+    fig.set_figwidth(16)
     fig.set_figheight(8)
     buffer = BytesIO()
     fig.savefig(buffer)

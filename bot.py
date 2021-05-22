@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 from os import getcwd
 from pathlib import Path
 
@@ -39,7 +40,15 @@ class Bot(commands.Bot):
 
         # misc
         self.session = ClientSession()
+
+        # colors
         self.scoresaber_color = 0xffde1a
+        self.cc_blue_color = 0x00aeef
+        self.cc_red_color = 0xee283b
+
+    @property
+    def cc_color(self):
+        return random.choice((self.cc_red_color, self.cc_blue_color))
 
     def load_extensions(self):
         self.load_extension('jishaku')

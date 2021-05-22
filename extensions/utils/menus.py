@@ -4,7 +4,7 @@ from discord.ext import menus
 
 class LeaderboardSource(menus.ListPageSource):
     async def format_page(self, menu, page):
-        embed = discord.Embed(title="Scoresaber Top 50", color=discord.Color.blurple())
+        embed = discord.Embed(title="Scoresaber Top 50", color=menu.ctx.bot.scoresaber_color)
         for user in page:
             name = user['playerName']
             player_id = user['playerId']

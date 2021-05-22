@@ -39,6 +39,7 @@ class Bot(commands.Bot):
 
         # misc
         self.session = ClientSession()
+        self.scoresaber_color = 0xffde1a
 
     def load_extensions(self):
         self.load_extension('jishaku')

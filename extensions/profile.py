@@ -18,7 +18,7 @@ class Profile(commands.Cog):
         score_stats = data['scoreStats']
         embed = discord.Embed(
             title=f"{player_info['playerName']}'s Profile",
-            color=discord.Color.magenta(),
+            color=self.bot.scoresaber_color,
             url="https://new.scoresaber.com/u/" + player_info['playerId']
         )
         embed.set_thumbnail(url="https://new.scoresaber.com" + player_info['avatar'])

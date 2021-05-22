@@ -44,7 +44,10 @@ class Bot(commands.Bot):
         self.load_extension('jishaku')
         extensions = [
             'extensions.stats',
-            'extensions.errorhandler'
+            'extensions.errorhandler',
+            'extensions.leaderboards',
+            'extensions.profile',
+            'extensions.misc'
         ]
         for ext in extensions:
             self.load_extension(ext)

@@ -59,7 +59,7 @@ class Stats(commands.Cog):
         pass
 
     @commands.command()
-    async def chart(self, ctx: commands.Context, query: ScoreSaberQueryConverter):
+    async def chart(self, ctx: commands.Context, *, query: ScoreSaberQueryConverter):
         buffer = await generate_chart(query['playerInfo'])
         file = discord.File(buffer, 'chart.png')
         await ctx.send(file=file)

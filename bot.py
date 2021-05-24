@@ -2,8 +2,8 @@ import asyncio
 import logging
 import random
 from os import getcwd
-from pathlib import Path
 
+import discord
 import toml
 from aiohttp import ClientSession
 from asyncpg import create_pool
@@ -39,7 +39,8 @@ class Bot(commands.Bot):
         )
 
         # misc
-        self.session = ClientSession()
+        headers = {"User-Agent": f"Discord bot for the Cube Community discord server. discord.py version {discord.__version__}"}
+        self.session = ClientSession(headers=headers)
 
         # colors
         self.scoresaber_color = 0xffde1a

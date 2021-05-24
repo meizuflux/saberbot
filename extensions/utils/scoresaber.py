@@ -3,7 +3,8 @@ from urllib.parse import quote
 
 from discord.ext import commands
 
-LINK_REGEX = re.compile(r"https?:\/\/(?:(?:new)\.)?scoresaber\.com\/u\/(?P<id>[0-9]{16,20})")
+PROFILE_LINK_REGEX = re.compile(r"https?:\/\/(?:(?:new)\.)?scoresaber\.com\/u\/(?P<id>[0-9]{16,20})")
+LEADERBOARD_LINK_REGEX = re.compile(r"https?:\/\/(?:(?:new)\.)?scoresaber\.com\/leaderboard\/[0-9]+")
 API_URL = "https://new.scoresaber.com/api"
 
 
@@ -27,7 +28,7 @@ async def get_profile(ctx: commands.Context, scoresaber_id: int) -> dict:
 
 class ScoreSaberQueryConverter(commands.Converter):
     async def convert(self, ctx: commands.Context, query: str) -> dict:
-        url_match = LINK_REGEX.match(query)
+        url_match = PROFILE_LINK_REGEX.match(query)
         if len(query) < 4 or len(query) > 31 and not url_match:
             raise commands.BadArgument("Please enter a query between 3 and 32 characters!")
 

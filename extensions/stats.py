@@ -28,12 +28,7 @@ def generate_chart(data) -> BytesIO:
     ax.set_ylabel('Rank', fontsize=25, labelpad=7)
 
     ax.invert_yaxis()
-    sorted_history = sorted(history)
-    change = sorted_history[-1] - sorted_history[0]
-    y_axis_diff = round(abs(change) / 5)
-    if y_axis_diff == 0:
-        y_axis_diff += 1
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(y_axis_diff))
+    plt.ticklabel_format(style='plain')
     plt.yticks(fontsize=20)
 
     ax.set_xticks(x_ticks)
@@ -60,6 +55,7 @@ class Stats(commands.Cog):
 
     @commands.command()
     async def chart(self, ctx: commands.Context, *, query: ScoreSaberQueryConverter):
+        await ctx.trigger_typing()
         buffer = await generate_chart(query['playerInfo'])
         file = discord.File(buffer, 'chart.png')
         await ctx.send(file=file)

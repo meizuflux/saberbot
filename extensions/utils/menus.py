@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import discord
 from discord.ext import menus
 
@@ -22,3 +24,97 @@ class LeaderboardSource(menus.ListPageSource):
             embed.set_footer(text=fmt)
 
         return embed
+
+class LeaderboardPages(menus.Menu):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cache = defaultdict(list)
+        self.total_scoresaber_pages = None
+        self.current_page = 0
+
+    def is_cached(self, page):
+        return page in self.cache
+
+    async def cache_page(self, page_num: int):
+        bot = self.ctx.bot
+        url = "https://new.scoresaber.com/api/players/" + str(page_num)
+        async with bot.session.get(url) as resp:
+            data = await resp.json()
+        players = data['players']
+        index = 0
+        page = page_num
+        for i in players:
+            self.cache[page].append(i)
+            index += 1
+            if index == 5:
+                index = 0
+                page += 1
+
+    async def get_max_pages(self):
+        if not self.total_scoresaber_pages:
+            async with self.ctx.bot.session.get("https://new.scoresaber.com/api/players/pages") as pages:
+                self.total_scoresaber_pages = (await pages.json())['pages']
+
+        return self.total_scoresaber_pages
+
+    async def format_page(self, players):
+        embed = discord.Embed(title="Scoresaber Top 50", color=self.ctx.bot.scoresaber_color)
+        for user in players:
+            name = user['playerName']
+            player_id = user['playerId']
+            change = user['difference']
+            if not str(change).startswith("-"):
+                change = "+" + str(change)
+            desc = (
+                f"[{player_id}](https://new.scoresaber.com/u/{player_id} \"{name}'s profile\")",
+                f"PP: {user['pp']}",
+                f"Change: {change}"
+            )
+            embed.add_field(name=f"**{user['rank']}.** {name}", value="\n".join(desc), inline=False)
+
+        return embed
+
+    async def send_initial_message(self, ctx, channel):
+        await self.send_page(1)
+
+    async def send_page(self, page_num):
+        if not self.is_cached(page_num):
+            await self.cache_page(page_num)
+        self.current_page = page_num
+        embed = await self.format_page(self.cache[page_num])
+        await self.ctx.send(embed=embed)
+
+
+class SongLeaderboardSource(menus.ListPageSource):
+    def __init__(self, embed: discord.Embed, entries, *, per_page):
+        super().__init__(entries, per_page=per_page)
+        self.embed = embed
+        self.headsets = {
+            '1': 'Oculus CV1',
+            '2': 'HTC Vive',
+            '16': "Oculus Rift S",
+            '32': 'Oculus Quest',
+            '64': 'Valve Index'
+        }
+
+    async def format_page(self, menu: menus.Menu, page):
+        self.embed.clear_fields()
+        if menu.current_page != 0:
+            self.embed.description = ""
+        if self.is_paginating():
+            fmt = f"Page {menu.current_page + 1}/{self.get_max_pages()}"
+            self.embed.set_footer(text=fmt)
+        for score in page:
+            title = f"**{score['rank']}.** {score['name']}"
+            msg = f"**ID:** [{score['playerId']}](https://new.scoresaber.com/u/{score['playerId']})\n"
+            if score['pp'] != "0":
+                msg += "**PP:** " + score['pp'] + "\n"
+            msg += (
+                f"**Score:** {int(score['score']):,d}\n"
+                f"**HMD:** {self.headsets.get(score['hmd'], 'Unknown')}"
+            )
+            if (misses := int(score['badCuts']) + int(score['missedNotes'])) != 0:
+                msg += f"\n**Misses:** {misses}\n"
+            self.embed.add_field(name=title, value=msg, inline=False)
+
+        return self.embed

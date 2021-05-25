@@ -1,14 +1,16 @@
 import json
 import re
+from typing import Optional
 from urllib.parse import quote
 
 import aiohttp
+import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands, menus, tasks
 
 from bot import Bot
 from extensions.utils import ArgumentParser
-from extensions.utils.menus import LeaderboardSource
+from extensions.utils.menus import LeaderboardSource, SongLeaderboardSource
 from extensions.utils.scoresaber import LEADERBOARD_LINK_REGEX
 
 
@@ -60,7 +62,7 @@ class Leaderboards(commands.Cog):
         await pages.start(ctx)
 
     @commands.command()
-    async def song_leaderboard(self, ctx: commands.Context, *, song: str):
+    async def song_leaderboard(self, ctx: commands.Context, page: Optional[int], *, song: str):
         if not hasattr(self, 'session'):
             return await ctx.send("Bot is not prepped yet, check again soon.")
         query = song.strip()
@@ -95,15 +97,28 @@ class Leaderboards(commands.Cog):
             raise commands.BadArgument(f"Difficulty '{diff}' is invalid.")
         await ctx.trigger_typing()
         _hash = await self.parse_song(query)
-        print(_hash)
-        url = f"https://scoresaber.com/game/scores-pc.php?levelId={_hash}&difficulty={difficulty}&gameMode=SoloStandard"
+        if not page:
+            page = 1
+        url = f"https://scoresaber.com/game/scores-pc.php?levelId={_hash}&difficulty={difficulty}&gameMode=SoloStandard&page={page}"
         async with self.session.get(url) as resp:
             data = json.loads(await resp.text())
-        async with self.bot.session.get('https://scoresaber.com/leaderboard/' + data['uid']) as lb:
+        url = 'https://scoresaber.com/leaderboard/' + data['uid']
+        embed = discord.Embed(color=self.bot.scoresaber_color, description=data['ranked'], url=url)
+
+        async with self.bot.session.get(url) as lb:
             soup = BeautifulSoup(await lb.text(), 'lxml')
-            title = soup.find('h4', {'class': 'title is-5'}).find_all('a')[0].text
-            print(soup.find_all('img')[1])
-        await ctx.send()
+        embed.title = soup.find('h4', {'class': 'title is-5'}).find_all('a')[0].text[:256]
+        embed.set_thumbnail(url=soup.find_all('img')[1]['src'])
+        things = [i.text.strip() for i in soup.find_all('b')[1:-1]]
+
+        embed.set_author(name="Mapped By " + things.pop(0))
+        mapping = {1: "Scores: ", 3: "Stars: ", 4: "Note Count: ", 5: "BPM: "}
+        for index, i in enumerate(things):
+            if fmt := mapping.get(index):
+                embed.description += "\n" + fmt + str(i)
+
+        pages = menus.MenuPages(source=SongLeaderboardSource(embed=embed, entries=data['scores'], per_page=4), delete_message_after=True)
+        await pages.start(ctx)
 
     @tasks.loop(hours=24)
     async def generate_php_session_id(self):

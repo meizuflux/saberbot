@@ -10,7 +10,7 @@ from discord.ext import commands, menus, tasks
 
 from bot import Bot
 from extensions.utils import ArgumentParser
-from extensions.utils.menus import LeaderboardSource, SongLeaderboardSource
+from extensions.utils.menus import LeaderboardPages, LeaderboardSource, SongLeaderboardSource
 from extensions.utils.scoresaber import LEADERBOARD_LINK_REGEX
 
 
@@ -60,6 +60,11 @@ class Leaderboards(commands.Cog):
                 raise commands.BadArgument(f"The leaderboard for page {page} is empty.")
         pages = menus.MenuPages(source=LeaderboardSource(data['players'], per_page=5), delete_message_after=True)
         await pages.start(ctx)
+
+    @commands.command()
+    async def test(self, ctx: commands.Context):
+        menu = LeaderboardPages(delete_message_after=True)
+        await menu.start(ctx)
 
     @commands.command()
     async def song_leaderboard(self, ctx: commands.Context, page: Optional[int], *, song: str):
@@ -117,7 +122,8 @@ class Leaderboards(commands.Cog):
             if fmt := mapping.get(index):
                 embed.description += "\n" + fmt + str(i)
 
-        pages = menus.MenuPages(source=SongLeaderboardSource(embed=embed, entries=data['scores'], per_page=4), delete_message_after=True)
+        pages = menus.MenuPages(source=SongLeaderboardSource(embed=embed, entries=data['scores'], per_page=4),
+                                delete_message_after=True)
         await pages.start(ctx)
 
     @tasks.loop(hours=24)

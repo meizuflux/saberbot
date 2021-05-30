@@ -32,6 +32,7 @@ class ScoreSaberQueryConverter(commands.Converter):
         if len(query) < 4 or len(query) > 31 and not url_match:
             raise commands.BadArgument("Please enter a query between 3 and 32 characters!")
 
+        await ctx.trigger_typing()
         if url_match:
             return await get_profile(ctx, int(url_match['id']))
 

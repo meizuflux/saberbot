@@ -1,8 +1,7 @@
 import asyncio
-import traceback
-from asyncio import ensure_future
 from json import dumps
 from math import ceil
+from typing import Optional, Union
 
 import discord
 from asyncpg import UniqueViolationError
@@ -28,17 +27,33 @@ class MainButton(discord.ui.Button):
 
 
 class StopButton(discord.ui.Button):
-    view: 'ProfileView'
+    def __init__(
+            self,
+            *,
+            style: discord.ButtonStyle = discord.ButtonStyle.red,
+            label: Optional[str] = 'Stop',
+            disabled: bool = False,
+            custom_id: Optional[str] = None,
+            emoji: Optional[Union[str, discord.PartialEmoji]] = None,
+            row: Optional[int] = None,
+    ):
+        super().__init__(
+            style=style,
+            label=label,
+            disabled=disabled,
+            custom_id=custom_id,
+            emoji=emoji,
+            row=row
+        )
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.message.delete()
 
 
 class ProfileView(discord.ui.View):
-    def __init__(self, data: dict, user_id: int, *args, **kwargs):
+    def __init__(self, data: dict, *args, **kwargs):
         self.profile_data = data
         self.scoresaber_id = data['playerInfo']['playerId']
-        self.user_id = user_id
         super().__init__(*args, **kwargs)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -89,10 +104,10 @@ class ProfileView(discord.ui.View):
                 FROM 
                     users 
                 WHERE 
-                    user_id = $1 AND scoresaber_id = $2
+                    AND scoresaber_id = $1
                 """
             )
-            items = await bot.pool.fetchrow(query, self.user_id, self.scoresaber_id)
+            items = await bot.pool.fetchrow(query, self.scoresaber_id)
             user = User.from_json(items)
             song = f"[{user.favorite_song.name}]({user.favorite_song.url})" if user.favorite_song.url is not None else "This user has not set a favorite song."
             saber = f"[{user.favorite_saber.name}]({user.favorite_saber.url})" if user.favorite_saber.url is not None else "This user has not set a favorite saber."
@@ -114,9 +129,35 @@ class ProfileView(discord.ui.View):
         await self.ctx.send(embed=self.profile_embed, view=self)
 
 
+class SettingButton(discord.ui.Button['SettingView']):
+    def __init__(self, setting, *, label):
+        super().__init__(style=discord.ButtonStyle.red, label=label)
+        self.setting = setting
+
+    async def callback(self, interaction: discord.Interaction):
+        func = getattr(self.view, 'set_' + self.setting, None)
+        if func is not None:
+            await func(interaction)
+
+
 class SettingView(discord.ui.View):
     editable = ("favorite_song", "favorite_saber", "headset", "grip")
 
+    def __init__(self, ctx: commands.Context):
+        super().__init__()
+        self.ctx = ctx
+        for i in self.editable:
+            self.add_item(SettingButton(i, label=i.replace('_', ' ').title()))
+        self.add_item(StopButton(style=discord.ButtonStyle.secondary))
+
+    async def set_headset(self, interaction: discord.Interaction):
+        ctx = self.ctx
+        bot = ctx.bot
+        await interaction.response.send_message("Please send the headset you prefer to use.", empheral=True)
+        try:
+            message = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel, timeout=30)
+        except TimeoutError:
+            return await interaction.response.send_message("You did not respond in time.", empheral=True)
 
 
 class Profile(commands.Cog):
@@ -125,21 +166,31 @@ class Profile(commands.Cog):
         self.background_loop.start()
 
     def cog_unload(self):
-        self.backround_loop.stop()
+        self.background_loop.stop()
 
-    @commands.command()
-    async def profile(self, ctx: commands.Context, *, query=None):
-        data: dict = await ScoreSaberQueryConverter().convert(ctx, query)
-        user_id = await self.bot.pool.fetchval("SELECT user_id FROM users WHERE scoresaber_id = $1", data['playerInfo']['playerId'])
-        view = ProfileView(data=data, user_id=user_id)
-        if user_id is not None:
-            view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
-            view.add_item(MiscButton(style=discord.ButtonStyle.green, label="Misc"))
+    @tasks.loop(minutes=15)
+    async def background_loop(self):
+        await self.bot.wait_until_ready()
+        counter = 0
+        async with self.bot.pool.acquire() as conn:
+            users = await conn.fetch("SELECT user_id, scoresaber_id FROM users")
+            for user in users:
+                if counter > 60:
+                    counter = 0
+                    await asyncio.sleep(60)
+                _id = user['scoresaber_id']
+                url = "https://new.scoresaber.com/api/player/" + _id + "/full"
+                async with self.bot.session.get(url) as resp:
+                    if not resp.ok:
+                        print(resp)
+                        print(resp.headers)
+                        print(resp.status)
+                        continue
+                    data = await resp.json()
+                await self.upsert_user_from_data(user['user_id'], data)
+                counter += 1
 
-        view.add_item(StopButton(style=discord.ButtonStyle.red, label="Stop"))
-        await view.start(ctx)
-
-    def user_history(self, now: int, history: str) -> int:
+    def calc_change(self, now: int, history: str) -> int:
         history = history.split(",")
         index = 7
         if len(history) < 7:
@@ -152,7 +203,7 @@ class Profile(commands.Cog):
 
         scoresaber_id = player_info['playerId']
         pp = player_info['pp']
-        change = self.user_history(player_info['rank'], player_info['history'])
+        change = self.calc_change(player_info['rank'], player_info['history'])
         play_count = dumps({"total": score_stats['totalPlayCount'], "ranked": score_stats['rankedPlayCount']})
         score = dumps({"total": score_stats['totalScore'], "ranked": score_stats['totalRankedScore']})
         average_accuracy = score_stats['averageRankedAccuracy']
@@ -178,43 +229,35 @@ class Profile(commands.Cog):
         await self.bot.pool.execute(query, *values)
 
     @commands.command()
+    async def profile(self, ctx: commands.Context, *, query=None):
+        data: dict = await ScoreSaberQueryConverter().convert(ctx, query)
+        view = ProfileView(data=data)
+        registered = await self.bot.pool.fetchval("SELECT True FROM users WHERE scoresaber_id = $1",
+                                                  data['playerInfo']['playerId'])
+        if registered is not None:
+            view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
+            view.add_item(MiscButton(style=discord.ButtonStyle.green, label="Misc"))
+
+        view.add_item(StopButton(style=discord.ButtonStyle.red, label="Stop"))
+        await view.start(ctx)
+
+    @commands.command()
     async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
         try:
             await self.upsert_user_from_data(ctx.author.id, user)
         except UniqueViolationError:
             player_id = user['playerInfo']['playerId']
             user_id = await self.bot.pool.fetchval("SELECT user_id FROM users WHERE scoresaber_id = $1", player_id)
-            return await ctx.send(f"{(await self.bot.fetch_user(user_id)).mention} already has registered themselves with this user.", allowed_mentions=discord.AllowedMentions.none())
+            return await ctx.send(
+                f"{(await self.bot.fetch_user(user_id)).mention} already has registered themselves with this user.",
+                allowed_mentions=discord.AllowedMentions.none())
         await ctx.send("Registered you into the database.")
 
-    @tasks.loop(minutes=15)
-    async def background_loop(self):
-        await self.bot.wait_until_ready()
-        counter = 0
-        async with self.bot.pool.acquire() as conn:
-            users = await conn.fetch("SELECT user_id, scoresaber_id FROM users")
-            for user in users:
-                if counter > 60:
-                    counter = 0
-                    await asyncio.sleep(60)
-                _id = user['scoresaber_id']
-                url = "https://new.scoresaber.com/api/player/" + _id + "/full"
-                async with self.bot.session.get(url) as resp:
-                    if not resp.ok:
-                        print(resp)
-                        print(resp.headers)
-                        print(resp.status)
-                        continue
-                    data = await resp.json()
-                await self.upsert_user_from_data(user['user_id'], data)
-                counter += 1
-
-    @background_loop.error
-    async def your_task_error(self, error):
-        formatted = "".join(
-            traceback.format_exception(type(error), error, error.__traceback__)
-        )
-        print(formatted)
+    @commands.command(name='set', aliases=('update',))
+    async def _set(self, ctx: commands.Context):
+        msg = f"Please click the button with the name that resembles the item you want to {ctx.invoked_with}."
+        embed = discord.Embed(title=f"Editing your profile.", description=msg, color=self.bot.cc_color)
+        await ctx.send(embed=embed, view=SettingView())
 
 
 def setup(bot):

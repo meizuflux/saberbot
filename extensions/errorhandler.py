@@ -81,6 +81,7 @@ class Handler(commands.Cog):
 
 
             formatted = traceback.format_exception(type(error), error, error.__traceback__)
+            print(''.join(formatted))
 
             await ctx.send(
                 f"Oops, an error occurred. Sorry about that."

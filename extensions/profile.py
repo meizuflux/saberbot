@@ -1,8 +1,11 @@
 import asyncio
+import traceback
+from asyncio import ensure_future
 from json import dumps
 from math import ceil
 
 import discord
+from asyncpg import UniqueViolationError
 from discord.ext import commands, tasks
 
 from bot import Bot
@@ -10,11 +13,11 @@ from extensions.utils.scoresaber import ScoreSaberQueryConverter
 from extensions.utils.user import User
 
 
-class FavoritesButton(discord.ui.Button):
+class MiscButton(discord.ui.Button):
     view: 'ProfileView'
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.edit_message(embed=self.view.favorites_embed)
+        await interaction.response.edit_message(embed=await self.view.misc_embed)
 
 
 class MainButton(discord.ui.Button):
@@ -34,6 +37,7 @@ class StopButton(discord.ui.Button):
 class ProfileView(discord.ui.View):
     def __init__(self, data: dict, *args, **kwargs):
         self.profile_data = data
+        self.scoresaber_id = data['playerInfo']['playerId']
         super().__init__(*args, **kwargs)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -73,37 +77,64 @@ class ProfileView(discord.ui.View):
         return self._profile_embed
 
     @property
-    def favorites_embed(self):
-        if not hasattr(self, '_fav_embed'):
-            embed = discord.Embed(color=self.ctx.bot.scoresaber_color)
-            embed.description = 'this is a test for your favorites'
-            self._fav_embed = embed
-        return self._fav_embed
+    async def misc_embed(self):
+        if not hasattr(self, '_misc_embed'):
+            bot: Bot = self.ctx.bot
+            embed = discord.Embed(title="Misc")
+            query = (
+                """
+                SELECT
+                    favorite_song, favorite_saber, headset, grip
+                FROM 
+                    users 
+                WHERE 
+                    user_id = $1 AND scoresaber_id = $2
+                """
+            )
+            items = await bot.pool.fetchrow(query, self.ctx.author.id, self.scoresaber_id)
+            user = User.from_json(items)
+            song = f"[{user.favorite_song.name}]({user.favorite_song.url})" if user.favorite_song.url is not None else "This user has not set a favorite song."
+            saber = f"[{user.favorite_saber.name}]({user.favorite_saber.url})" if user.favorite_saber.url is not None else "This user has not set a favorite saber."
+            headset = user.headset or "This user has not set which headset they use."
+            grip = user.grip or "This user has not specified which grip they use."
+            embed.description = (
+                f"**Favorite Song:** {song}\n"
+                f"**Favorite Saber:** {saber}\n"
+                f"**Headset:** {headset}\n"
+                f"**Grip:** {grip}"
+            )
+            self._misc_embed: discord.Embed = embed
+
+        self._misc_embed.color = self.ctx.bot.cc_color
+        return self._misc_embed
 
     async def start(self, ctx: commands.Context):
         self.ctx = ctx
         await self.ctx.send(embed=self.profile_embed, view=self)
-        
-        
+
+
 class SettingView(discord.ui.View):
     editable = ("favorite_song", "favorite_saber", "headset", "grip")
-    
+
 
 
 class Profile(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.background_loop.start()
-        
+
     def cog_unload(self):
         self.backround_loop.stop()
 
     @commands.command()
-    async def profile(self, ctx: commands.Context, *, query: ScoreSaberQueryConverter):
-        query: dict
-        view = ProfileView(data=query)
-        view.add_item(MainButton(style=discord.ButtonStyle.primary, label="Stats"))
-        view.add_item(FavoritesButton(style=discord.ButtonStyle.green, label="Favorites"))
+    async def profile(self, ctx: commands.Context, *, query=None):
+        data: dict = await ScoreSaberQueryConverter().convert(ctx, query)
+        view = ProfileView(data=data)
+
+        if await self.bot.pool.fetchval("SELECT True FROM users WHERE scoresaber_id = $1", data['playerInfo']['playerId']) is True:
+            view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
+            view.add_item(MiscButton(style=discord.ButtonStyle.green, label="Misc"))
+
         view.add_item(StopButton(style=discord.ButtonStyle.red, label="Stop"))
         await view.start(ctx)
 
@@ -113,7 +144,7 @@ class Profile(commands.Cog):
         if len(history) < 7:
             index = len(history)
         return int(history[-index]) - now
-    
+
     async def upsert_user_from_data(self, user_id: int, data: dict):
         player_info = data['playerInfo']
         score_stats = data['scoreStats']
@@ -147,11 +178,17 @@ class Profile(commands.Cog):
 
     @commands.command()
     async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
-        await self.upsert_user_from_data(ctx.author.id, user)
+        try:
+            await self.upsert_user_from_data(ctx.author.id, user)
+        except UniqueViolationError:
+            player_id = user['playerInfo']['playerId']
+            user_id = await self.bot.pool.fetchval("SELECT user_id FROM users WHERE scoresaber_id = $1", player_id)
+            return await ctx.send(f"{(await self.bot.fetch_user(user_id)).mention} already has registered themselves with this user.", allowed_mentions=discord.AllowedMentions.none())
         await ctx.send("Registered you into the database.")
 
     @tasks.loop(minutes=15)
     async def background_loop(self):
+        await self.bot.wait_until_ready()
         counter = 0
         async with self.bot.pool.acquire() as conn:
             users = await conn.fetch("SELECT user_id, scoresaber_id FROM users")
@@ -160,16 +197,24 @@ class Profile(commands.Cog):
                     counter = 0
                     await asyncio.sleep(60)
                 _id = user['scoresaber_id']
-                url = "https://new.scoresaber.com/api/players/" + _id + "/full"
+                url = "https://new.scoresaber.com/api/player/" + _id + "/full"
                 async with self.bot.session.get(url) as resp:
                     if not resp.ok:
                         print(resp)
                         print(resp.headers)
                         print(resp.status)
+                        continue
                     data = await resp.json()
                 await self.upsert_user_from_data(user['user_id'], data)
                 counter += 1
-                
+
+    @background_loop.error
+    async def your_task_error(self, error):
+        formatted = "".join(
+            traceback.format_exception(type(error), error, error.__traceback__)
+        )
+        print(formatted)
+
 
 def setup(bot):
     bot.add_cog(Profile(bot))

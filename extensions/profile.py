@@ -35,9 +35,10 @@ class StopButton(discord.ui.Button):
 
 
 class ProfileView(discord.ui.View):
-    def __init__(self, data: dict, *args, **kwargs):
+    def __init__(self, data: dict, user_id: int, *args, **kwargs):
         self.profile_data = data
         self.scoresaber_id = data['playerInfo']['playerId']
+        self.user_id = user_id
         super().__init__(*args, **kwargs)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -91,7 +92,7 @@ class ProfileView(discord.ui.View):
                     user_id = $1 AND scoresaber_id = $2
                 """
             )
-            items = await bot.pool.fetchrow(query, self.ctx.author.id, self.scoresaber_id)
+            items = await bot.pool.fetchrow(query, self.user_id, self.scoresaber_id)
             user = User.from_json(items)
             song = f"[{user.favorite_song.name}]({user.favorite_song.url})" if user.favorite_song.url is not None else "This user has not set a favorite song."
             saber = f"[{user.favorite_saber.name}]({user.favorite_saber.url})" if user.favorite_saber.url is not None else "This user has not set a favorite saber."
@@ -129,9 +130,9 @@ class Profile(commands.Cog):
     @commands.command()
     async def profile(self, ctx: commands.Context, *, query=None):
         data: dict = await ScoreSaberQueryConverter().convert(ctx, query)
-        view = ProfileView(data=data)
-
-        if await self.bot.pool.fetchval("SELECT True FROM users WHERE scoresaber_id = $1", data['playerInfo']['playerId']) is True:
+        user_id = await self.bot.pool.fetchval("SELECT user_id FROM users WHERE scoresaber_id = $1", data['playerInfo']['playerId'])
+        view = ProfileView(data=data, user_id=user_id)
+        if user_id is not None:
             view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
             view.add_item(MiscButton(style=discord.ButtonStyle.green, label="Misc"))
 

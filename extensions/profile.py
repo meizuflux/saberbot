@@ -83,6 +83,11 @@ class ProfileView(discord.ui.View):
     async def start(self, ctx: commands.Context):
         self.ctx = ctx
         await self.ctx.send(embed=self.profile_embed, view=self)
+        
+        
+class SettingView(discord.ui.View):
+    editable = ("favorite_song", "favorite_saber", "headset", "grip")
+    
 
 
 class Profile(commands.Cog):

@@ -17,8 +17,8 @@ class Favorite:
     def from_json(cls, json):
         json = loads(json)
         return cls(
-            name=json['name'],
-            url=json['url']
+            name=json.get('name'),
+            url=json.get('url')
         )
 
 
@@ -26,14 +26,16 @@ class ScoreStat:
     def __init__(self, total: int, ranked: int):
         self.total = total
         self.ranked = ranked
-        self.unranked = total - ranked
+        self.unranked = None
+        if total is not None and ranked is not None:
+            self.unranked = total - ranked
 
     @classmethod
     def from_json(cls, json):
         json = loads(json)
         return cls(
-            total=json['total'],
-            ranked=json['ranked']
+            total=json.get('total'),
+            ranked=json.get('ranked')
         )
 
 
@@ -54,15 +56,15 @@ class User:
     @classmethod
     def from_json(cls, data):
         return cls(
-            id=data['user_id'],
-            scoresaber_id=data['scoresaber_id'],
-            pp=data['user_id'],
-            change=data['change'],
-            favorite_song=Favorite.from_json(data['favorite_song']),
-            favorite_saber=Favorite.from_json(data['favorite_saber']),
-            play_count=ScoreStat.from_json(data['play_count']),
-            score=ScoreStat.from_json(data['score']),
-            average_accuracy=data['average_accuracy'],
-            headset=data['headset'],
-            grip=data['grip']
+            id=data.get('user_id'),
+            scoresaber_id=data.get('scoresaber_id'),
+            pp=data.get('pp'),
+            change=data.get('change'),
+            favorite_song=Favorite.from_json(data.get('favorite_song', '{}')),
+            favorite_saber=Favorite.from_json(data.get('favorite_saber', '{}')),
+            play_count=ScoreStat.from_json(data.get('play_count', '{}')),
+            score=ScoreStat.from_json(data.get('score', '{}')),
+            average_accuracy=data.get('average_accuracy'),
+            headset=data.get('headset'),
+            grip=data.get('grip')
         )

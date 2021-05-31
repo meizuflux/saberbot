@@ -47,7 +47,7 @@ class Leaderboards(commands.Cog):
                             _hash = song['hash']
                             break
                 if _hash is None:
-                    raise commands.BadArgument("I could not find a song hash from your query.")
+                    raise commands.BadArgument("I could not find a song hash from your data.")
         self.hash_cache[query] = _hash
         return _hash.upper()
 
@@ -62,7 +62,7 @@ class Leaderboards(commands.Cog):
             return await ctx.send("Bot is not prepped yet, check again soon.")
         query = song.strip()
         parser = ArgumentParser(allow_abbrev=False, add_help=False)
-        parser.add_argument('query', nargs='*', default=None)
+        parser.add_argument('data', nargs='*', default=None)
         parser.add_argument('-d', '--difficulty', nargs='+')
         parser.add_argument('-m', '--minimal', action='store_true')
 

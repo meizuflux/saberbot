@@ -1,8 +1,9 @@
+import asyncio
 from json import dumps
 from math import ceil
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from bot import Bot
 from extensions.utils.scoresaber import ScoreSaberQueryConverter
@@ -87,6 +88,10 @@ class ProfileView(discord.ui.View):
 class Profile(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.background_loop.start()
+        
+    def cog_unload(self):
+        self.backround_loop.stop()
 
     @commands.command()
     async def profile(self, ctx: commands.Context, *, query: ScoreSaberQueryConverter):
@@ -103,12 +108,10 @@ class Profile(commands.Cog):
         if len(history) < 7:
             index = len(history)
         return int(history[-index]) - now
-
-    @commands.command()
-    async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
-        user: dict
-        player_info = user['playerInfo']
-        score_stats = user['scoreStats']
+    
+    async def upsert_user_from_data(self, user_id: int, data: dict):
+        player_info = data['playerInfo']
+        score_stats = data['scoreStats']
 
         scoresaber_id = player_info['playerId']
         pp = player_info['pp']
@@ -134,16 +137,34 @@ class Profile(commands.Cog):
                         average_accuracy = $7
             """
         )
-        values = (ctx.author.id, scoresaber_id, pp, change, play_count, score, average_accuracy)
+        values = (user_id, scoresaber_id, pp, change, play_count, score, average_accuracy)
         await self.bot.pool.execute(query, *values)
-        await ctx.send("Registered you into the database.")
 
     @commands.command()
-    async def eh(self, ctx: commands.Context):
-        data = await self.bot.pool.fetchrow("SELECT * FROM users WHERE user_id = $1", ctx.author.id)
-        print(data)
-        print(User.from_json(data))
+    async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
+        await self.upsert_user_from_data(ctx.author.id, user)
+        await ctx.send("Registered you into the database.")
 
+    @tasks.loop(minutes=15)
+    async def background_loop(self):
+        counter = 0
+        async with self.bot.pool.acquire() as conn:
+            users = await conn.fetch("SELECT user_id, scoresaber_id FROM users")
+            for user in users:
+                if counter > 60:
+                    counter = 0
+                    await asyncio.sleep(60)
+                _id = user['scoresaber_id']
+                url = "https://new.scoresaber.com/api/players/" + _id + "/full"
+                async with self.bot.session.get(url) as resp:
+                    if not resp.ok:
+                        print(resp)
+                        print(resp.headers)
+                        print(resp.status)
+                    data = await resp.json()
+                await self.upsert_user_from_data(user['user_id'], data)
+                counter += 1
+                
 
 def setup(bot):
     bot.add_cog(Profile(bot))

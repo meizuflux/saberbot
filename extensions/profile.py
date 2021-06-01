@@ -1,163 +1,13 @@
 import asyncio
 from json import dumps
-from math import ceil
-from typing import Optional, Union
 
 import discord
 from asyncpg import UniqueViolationError
 from discord.ext import commands, tasks
 
 from bot import Bot
+from extensions.utils.buttons import MainButton, MiscButton, ProfileView, SettingView, StopButton
 from extensions.utils.scoresaber import ScoreSaberQueryConverter
-from extensions.utils.user import User
-
-
-class MiscButton(discord.ui.Button):
-    view: 'ProfileView'
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.edit_message(embed=await self.view.misc_embed)
-
-
-class MainButton(discord.ui.Button):
-    view: 'ProfileView'
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.edit_message(embed=self.view.profile_embed)
-
-
-class StopButton(discord.ui.Button):
-    def __init__(
-            self,
-            *,
-            style: discord.ButtonStyle = discord.ButtonStyle.red,
-            label: Optional[str] = 'Stop',
-            disabled: bool = False,
-            custom_id: Optional[str] = None,
-            emoji: Optional[Union[str, discord.PartialEmoji]] = None,
-            row: Optional[int] = None,
-    ):
-        super().__init__(
-            style=style,
-            label=label,
-            disabled=disabled,
-            custom_id=custom_id,
-            emoji=emoji,
-            row=row
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.message.delete()
-
-
-class ProfileView(discord.ui.View):
-    def __init__(self, data: dict, *args, **kwargs):
-        self.profile_data = data
-        self.scoresaber_id = data['playerInfo']['playerId']
-        super().__init__(*args, **kwargs)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.ctx.author.id
-
-    @property
-    def profile_embed(self):
-        if not hasattr(self, '_profile_embed'):
-            player_info = self.profile_data['playerInfo']
-            score_stats = self.profile_data['scoreStats']
-            embed = discord.Embed(
-                title=f"{player_info['playerName']}'s Profile",
-                color=self.ctx.bot.scoresaber_color,
-                url="https://new.scoresaber.com/u/" + player_info['playerId']
-            )
-            embed.set_thumbnail(url="https://new.scoresaber.com" + player_info['avatar'])
-
-            country_url = f"[#{player_info['countryRank']:,d}](https://scoresaber.com/global/{ceil(player_info['countryRank'] / 50)}&country={player_info['country']})"
-            info_msg = (
-                f"**PP:** {player_info['pp']}\n"
-                f"**Rank:** [#{player_info['rank']:,d}](https://new.scoresaber.com/rankings/{ceil(player_info['rank'] / 50)})\n"
-                f"**Country Rank:** :flag_{player_info['country'].lower()}: {country_url}"
-            )
-            if role := player_info['role']:
-                info_msg += f"\n**Role:** {role}"
-            embed.add_field(name="Player Info:", value=info_msg)
-
-            score_msg = (
-                f"**Average Ranked Accuracy:** {score_stats['averageRankedAccuracy']:.2f}\n"
-                f"**Total Score:** {score_stats['totalScore']:,d}\n"
-                f"**Total Ranked Score:** {score_stats['totalRankedScore']:,d}\n"
-                f"**Total Play Count:** {score_stats['totalPlayCount']:,d}\n"
-                f"**Ranked Play Count:** {score_stats['rankedPlayCount']:,d}"
-            )
-            embed.add_field(name="Score Stats:", value=score_msg, inline=False)
-            self._profile_embed = embed
-        return self._profile_embed
-
-    @property
-    async def misc_embed(self):
-        if not hasattr(self, '_misc_embed'):
-            bot: Bot = self.ctx.bot
-            embed = discord.Embed(title="Misc")
-            query = (
-                """
-                SELECT
-                    favorite_song, favorite_saber, headset, grip
-                FROM 
-                    users 
-                WHERE 
-                    AND scoresaber_id = $1
-                """
-            )
-            items = await bot.pool.fetchrow(query, self.scoresaber_id)
-            user = User.from_json(items)
-            song = f"[{user.favorite_song.name}]({user.favorite_song.url})" if user.favorite_song.url is not None else "This user has not set a favorite song."
-            saber = f"[{user.favorite_saber.name}]({user.favorite_saber.url})" if user.favorite_saber.url is not None else "This user has not set a favorite saber."
-            headset = user.headset or "This user has not set which headset they use."
-            grip = user.grip or "This user has not specified which grip they use."
-            embed.description = (
-                f"**Favorite Song:** {song}\n"
-                f"**Favorite Saber:** {saber}\n"
-                f"**Headset:** {headset}\n"
-                f"**Grip:** {grip}"
-            )
-            self._misc_embed: discord.Embed = embed
-
-        self._misc_embed.color = self.ctx.bot.cc_color
-        return self._misc_embed
-
-    async def start(self, ctx: commands.Context):
-        self.ctx = ctx
-        await self.ctx.send(embed=self.profile_embed, view=self)
-
-
-class SettingButton(discord.ui.Button['SettingView']):
-    def __init__(self, setting, *, label):
-        super().__init__(style=discord.ButtonStyle.red, label=label)
-        self.setting = setting
-
-    async def callback(self, interaction: discord.Interaction):
-        func = getattr(self.view, 'set_' + self.setting, None)
-        if func is not None:
-            await func(interaction)
-
-
-class SettingView(discord.ui.View):
-    editable = ("favorite_song", "favorite_saber", "headset", "grip")
-
-    def __init__(self, ctx: commands.Context):
-        super().__init__()
-        self.ctx = ctx
-        for i in self.editable:
-            self.add_item(SettingButton(i, label=i.replace('_', ' ').title()))
-        self.add_item(StopButton(style=discord.ButtonStyle.secondary))
-
-    async def set_headset(self, interaction: discord.Interaction):
-        ctx = self.ctx
-        bot = ctx.bot
-        await interaction.response.send_message("Please send the headset you prefer to use.", empheral=True)
-        try:
-            message = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel, timeout=30)
-        except TimeoutError:
-            return await interaction.response.send_message("You did not respond in time.", empheral=True)
 
 
 class Profile(commands.Cog):
@@ -190,7 +40,8 @@ class Profile(commands.Cog):
                 await self.upsert_user_from_data(user['user_id'], data)
                 counter += 1
 
-    def calc_change(self, now: int, history: str) -> int:
+    @staticmethod
+    def calc_change(now: int, history: str) -> int:
         history = history.split(",")
         index = 7
         if len(history) < 7:
@@ -238,7 +89,7 @@ class Profile(commands.Cog):
             view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
             view.add_item(MiscButton(style=discord.ButtonStyle.green, label="Misc"))
 
-        view.add_item(StopButton(style=discord.ButtonStyle.red, label="Stop"))
+        view.add_item(StopButton())
         await view.start(ctx)
 
     @commands.command()
@@ -257,7 +108,7 @@ class Profile(commands.Cog):
     async def _set(self, ctx: commands.Context):
         msg = f"Please click the button with the name that resembles the item you want to {ctx.invoked_with}."
         embed = discord.Embed(title=f"Editing your profile.", description=msg, color=self.bot.cc_color)
-        await ctx.send(embed=embed, view=SettingView())
+        await ctx.send(embed=embed, view=SettingView(ctx))
 
 
 def setup(bot):

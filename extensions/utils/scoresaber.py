@@ -4,8 +4,8 @@ from urllib.parse import quote
 import discord
 from discord.ext import commands
 
-PROFILE_LINK_REGEX = re.compile(r"https?:\/\/(?:(?:new)\.)?scoresaber\.com\/u\/(?P<id>[0-9]{16,20})")
-LEADERBOARD_LINK_REGEX = re.compile(r"https?:\/\/(?:(?:new)\.)?scoresaber\.com\/leaderboard\/[0-9]+")
+PROFILE_LINK_REGEX = re.compile(r"https?://(?:(?:new)\.)?scoresaber\.com/u/(?P<id>[0-9]{16,20})")
+LEADERBOARD_LINK_REGEX = re.compile(r"https?://(?:(?:new)\.)?scoresaber\.com/leaderboard/[0-9]+")
 DISCORD_MENTION_REGEX = mention_regex = re.compile(r"<@(!?)([0-9]*)>")
 API_URL = "https://new.scoresaber.com/api"
 

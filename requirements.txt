@@ -7,7 +7,7 @@ beautifulsoup4==4.9.3
 braceexpand==0.1.7
 chardet==4.0.0
 cycler==0.10.0
-discord-ext-menus @ git+https://github.com/Rapptz/discord-ext-menus@309c70222eec33acacb8c21bbb0fbe9bc57de661
+discord-ext-menus @ git+https://github.com/Rapptz/discord-ext-menus@master
 discord.py @ git+https://github.com/rapptz/discord.py@master
 humanize==3.5.0
 idna==3.1
@@ -21,8 +21,8 @@ numpy==1.20.3
 Pillow==8.2.0
 pyparsing==2.4.7
 python-dateutil==2.8.1
+PyYAML==5.4.1
 six==1.16.0
 soupsieve==2.2.1
-toml==0.10.2
 typing-extensions==3.10.0.0
 yarl==1.6.3

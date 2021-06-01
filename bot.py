@@ -4,7 +4,7 @@ import random
 from os import getcwd
 
 import discord
-import toml
+import config
 from aiohttp import ClientSession
 from asyncpg import Pool, create_pool
 from discord.ext import commands
@@ -29,13 +29,9 @@ class Bot(commands.Bot):
         # the working directory for the bot, kinda hacky tho
         self.working_directory = getcwd().replace("\\", "/") + "/"
 
-        # load config files
-        with open(self.working_directory + "config.toml") as f:
-            self.config = toml.loads(f.read())
-
         # create a database connection
         self.pool: Pool = self.loop.run_until_complete(
-            create_pool(dsn=self.config['core']['postgres_dsn'], loop=self.loop)
+            create_pool(dsn=config.postgres_dsn, loop=self.loop)
         )
         self.loop.create_task(self.__prep())
 

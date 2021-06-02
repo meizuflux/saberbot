@@ -10,6 +10,7 @@ from bot import Bot
 from extensions.utils.user import User
 
 BEATSAVER_SONG_REGEX = re.compile(r"https?://beatsaver\.com/beatmap/(?P<key>[0-9a-zA_Z]+)")
+MODELSABER_VALIDATION_REGEX = re.compile(r"https?://modelsaber\.com/sabers/\?id=(?P<id>[0-9a-zA_Z]+)")
 
 
 class MiscButton(discord.ui.Button):
@@ -170,8 +171,6 @@ class SettingView(discord.ui.View):
         )
         await pool.execute(query, value, self.ctx.author.id)
 
-
-
     async def set_favorite_song(self, interaction: discord.Interaction):
         ctx = self.ctx
         await interaction.response.send_message("Please send the BeatSaver url of your favorite song.", ephemeral=True)
@@ -190,12 +189,42 @@ class SettingView(discord.ui.View):
                 url = "https://beatsaver.com/api/maps/detail/" + key
                 async with ctx.bot.session.get(url) as resp:
                     if not resp.ok:
-                        return await interaction.followup.send("Something went wrong: HTTP Error code {resp.status}")
+                        return await interaction.followup.send(f"Something went wrong: HTTP Error code {resp.status}", ephemeral=True)
                     song_name = (await resp.json())['name']
                     song_url = "https://beatsaver.com/beatmap/" + key
                 json = dumps({"name": song_name, "url": song_url})
                 await self.update('favorite_song', json)
                 await self.send_confirmed(interaction, f"I have set your favorite song to [`{song_name}`]({song_url})")
+
+    async def set_favorite_saber(self, interaction: discord.Interaction):
+        ctx = self.ctx
+        await interaction.response.send_message("Please send the ModelSaber url of your favorite saber.", ephemeral=True)
+        try:
+            response = await ctx.bot.wait_for('message',
+                                              check=lambda m: m.author == ctx.author and m.channel == ctx.channel,
+                                              timeout=60)
+        except TimeoutError:
+            await interaction.response.send_message("You did not respond in time.", empheral=True)
+        else:
+            content = response.content.lower().strip("<>").rstrip("&pc")
+            if not (id_match := MODELSABER_VALIDATION_REGEX.fullmatch(content)):
+                await interaction.followup.send("Please send a valid ModelSaber url.", ephemeral=True)
+            else:
+                _id = id_match['id']
+                url = "https://modelsaber.com/api/v2/get.php?type=saber&filter=id:" + _id
+                async with ctx.bot.session.get(url) as resp:
+                    if not resp.ok:
+                        return await interaction.followup.send(f"Something went wrong: HTTP Error code {resp.status}", ephemeral=True)
+                    data = await resp.json()
+                    if not data:
+                        return await interaction.followup.send(f"Invalid URL provided.", ephemeral=True)
+                    for i in data.values():
+                        saber_name = i['name']
+                        break
+                    saber_url = "https://modelsaber.com/Sabers/?id=" + _id
+                json = dumps({"name": saber_name, "url": saber_url})
+                await self.update('favorite_saber', json)
+                await self.send_confirmed(interaction, f"I have set your favorite saber to [`{saber_name}`]({saber_url})")
 
     async def set_headset(self, interaction: discord.Interaction):
         embed = discord.Embed(description="Please click the button that resembles which headset you prefer to use.",

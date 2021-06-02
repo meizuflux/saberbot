@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
     user_id BIGINT PRIMARY KEY,
     scoresaber_id VARCHAR UNIQUE,
+    rank BIGINT,
     pp DOUBLE PRECISION,
     change BIGINT,
     play_count JSONB, /* {"total": 41234, "ranked": 5342} */

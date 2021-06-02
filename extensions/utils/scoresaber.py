@@ -15,9 +15,9 @@ async def scoresaber_id_from_query(ctx: commands.Context, query: str) -> dict:
     async with ctx.bot.session.get(API_URL + "/players/by-name/" + query) as resp:
         data = await resp.json()
     try:
-        return await get_profile(ctx, data['players'][0]['playerId'])
+        return await get_profile(ctx, data["players"][0]["playerId"])
     except KeyError:
-        raise commands.BadArgument(data['error']['message'])
+        raise commands.BadArgument(data["error"]["message"])
 
 
 async def get_profile(ctx: commands.Context, scoresaber_id: int) -> dict:
@@ -31,9 +31,13 @@ async def get_profile(ctx: commands.Context, scoresaber_id: int) -> dict:
 
 
 async def scoresaber_id_from_user(ctx, user: discord.User):
-    scoresaber_id = await ctx.bot.pool.fetchval("SELECT scoresaber_id FROM users WHERE user_id = $1", user.id)
+    scoresaber_id = await ctx.bot.pool.fetchval(
+        "SELECT scoresaber_id FROM users WHERE user_id = $1", user.id
+    )
     if scoresaber_id is None:
-        raise commands.BadArgument("This user is not registered." if user != ctx.author else "You are not registered.")
+        raise commands.BadArgument(
+            "This user is not registered." if user != ctx.author else "You are not registered."
+        )
     return await get_profile(ctx, scoresaber_id)
 
 
@@ -56,6 +60,6 @@ class ScoreSaberQueryConverter(commands.Converter):
             return await scoresaber_id_from_user(ctx, user)
 
         if url_match:
-            return await get_profile(ctx, int(url_match['id']))
+            return await get_profile(ctx, int(url_match["id"]))
 
         return await scoresaber_id_from_query(ctx, query)

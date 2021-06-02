@@ -5,11 +5,15 @@ try:
     with open("config.yml", "r") as f:
         config = yaml.safe_load(f)
 except FileNotFoundError:
-    raise RuntimeError("You have no config.yml file setup! Please make one using the config.yml.example file!")
+    raise RuntimeError(
+        "You have no config.yml file setup! Please make one using the config.yml.example file!"
+    )
 
 bot_token = config.get("token")
 if not bot_token:
-    raise RuntimeError("No token is provided! Please get a token and add it to the config.yml file!")
+    raise RuntimeError(
+        "No token is provided! Please get a token and add it to the config.yml file!"
+    )
 
 postgres_dsn = config.get("postgres_dsn")
 if not postgres_dsn:
@@ -20,13 +24,7 @@ prefix = config.get("prefix", "!")
 activity = None
 _activity = config.get("activity")
 if _activity:
-    _valid_types = {
-        "playing": 0,
-        "streaming": 1,
-        "listening": 2,
-        "watching": 3,
-        "competing": 5
-    }
+    _valid_types = {"playing": 0, "streaming": 1, "listening": 2, "watching": 3, "competing": 5}
     _activity_type = _activity.get("type")
     if _activity_type not in _valid_types:
         raise RuntimeError(f"Activity Type must be one of {', '.join(_valid_types)}")
@@ -42,6 +40,3 @@ status = config.get("status", "online")
 _valid_status = ("online", "offline", "idle", "dnd")
 if status not in _valid_status:
     raise RuntimeError(f"Status must be one of {', '.join(_valid_status)}")
-
-
-

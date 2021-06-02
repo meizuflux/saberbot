@@ -28,7 +28,7 @@ class Profile(commands.Cog):
                 if counter > 60:
                     counter = 0
                     await asyncio.sleep(60)
-                _id = user['scoresaber_id']
+                _id = user["scoresaber_id"]
                 url = "https://new.scoresaber.com/api/player/" + _id + "/full"
                 async with self.bot.session.get(url) as resp:
                     if not resp.ok:
@@ -37,7 +37,7 @@ class Profile(commands.Cog):
                         print(resp.status)
                         continue
                     data = await resp.json()
-                await self.upsert_user_from_data(user['user_id'], data)
+                await self.upsert_user_from_data(user["user_id"], data)
                 counter += 1
 
     @staticmethod
@@ -49,18 +49,21 @@ class Profile(commands.Cog):
         return int(history[-index]) - now
 
     async def upsert_user_from_data(self, user_id: int, data: dict):
-        player_info = data['playerInfo']
-        score_stats = data['scoreStats']
+        player_info = data["playerInfo"]
+        score_stats = data["scoreStats"]
 
-        scoresaber_id = player_info['playerId']
-        pp = player_info['pp']
-        change = self.calc_change(player_info['rank'], player_info['history'])
-        play_count = dumps({"total": score_stats['totalPlayCount'], "ranked": score_stats['rankedPlayCount']})
-        score = dumps({"total": score_stats['totalScore'], "ranked": score_stats['totalRankedScore']})
-        average_accuracy = score_stats['averageRankedAccuracy']
+        scoresaber_id = player_info["playerId"]
+        pp = player_info["pp"]
+        change = self.calc_change(player_info["rank"], player_info["history"])
+        play_count = dumps(
+            {"total": score_stats["totalPlayCount"], "ranked": score_stats["rankedPlayCount"]}
+        )
+        score = dumps(
+            {"total": score_stats["totalScore"], "ranked": score_stats["totalRankedScore"]}
+        )
+        average_accuracy = score_stats["averageRankedAccuracy"]
 
-        query = (
-            """
+        query = """
             INSERT INTO
                 users (user_id, scoresaber_id, pp, change, play_count, score, average_accuracy)
             VALUES
@@ -75,7 +78,6 @@ class Profile(commands.Cog):
                         score = $6,
                         average_accuracy = $7
             """
-        )
         values = (user_id, scoresaber_id, pp, change, play_count, score, average_accuracy)
         await self.bot.pool.execute(query, *values)
 
@@ -83,8 +85,9 @@ class Profile(commands.Cog):
     async def profile(self, ctx: commands.Context, *, query=None):
         data: dict = await ScoreSaberQueryConverter().convert(ctx, query)
         view = ProfileView(data=data)
-        registered = await self.bot.pool.fetchval("SELECT True FROM users WHERE scoresaber_id = $1",
-                                                  data['playerInfo']['playerId'])
+        registered = await self.bot.pool.fetchval(
+            "SELECT True FROM users WHERE scoresaber_id = $1", data["playerInfo"]["playerId"]
+        )
         if registered is not None:
             view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
             view.add_item(MiscButton(style=discord.ButtonStyle.green, label="Misc"))
@@ -97,17 +100,22 @@ class Profile(commands.Cog):
         try:
             await self.upsert_user_from_data(ctx.author.id, user)
         except UniqueViolationError:
-            player_id = user['playerInfo']['playerId']
-            user_id = await self.bot.pool.fetchval("SELECT user_id FROM users WHERE scoresaber_id = $1", player_id)
+            player_id = user["playerInfo"]["playerId"]
+            user_id = await self.bot.pool.fetchval(
+                "SELECT user_id FROM users WHERE scoresaber_id = $1", player_id
+            )
             return await ctx.send(
                 f"{(await self.bot.fetch_user(user_id)).mention} already has registered themselves with this user.",
-                allowed_mentions=discord.AllowedMentions.none())
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
         await ctx.send("Registered you into the database.")
 
-    @commands.command(name='set', aliases=('update',))
+    @commands.command(name="set", aliases=("update",))
     async def _set(self, ctx: commands.Context):
         msg = f"Please click the button with the name that resembles the item you want to {ctx.invoked_with}."
-        embed = discord.Embed(title=f"Editing your profile.", description=msg, color=self.bot.cc_color)
+        embed = discord.Embed(
+            title=f"Editing your profile.", description=msg, color=self.bot.cc_color
+        )
         await ctx.send(embed=embed, view=SettingView(ctx))
 
 

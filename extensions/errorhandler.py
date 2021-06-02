@@ -36,7 +36,7 @@ class Handler(commands.Cog):
 
             command = ctx.command.qualified_name
 
-        error = getattr(error, 'original', error)
+        error = getattr(error, "original", error)
 
         if isinstance(error, commands.CheckFailure):
             return await ctx.send(str(error))
@@ -48,13 +48,13 @@ class Handler(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             errors = str(error).split(" ", maxsplit=1)
             msg = (
-                f'`{errors[0]}` {errors[1]}\n'
-                f'You can view the help for this command with `{ctx.prefix}help` `{command}`'
+                f"`{errors[0]}` {errors[1]}\n"
+                f"You can view the help for this command with `{ctx.prefix}help` `{command}`"
             )
             return await ctx.send(msg)
 
         if isinstance(error, commands.DisabledCommand):
-            return await ctx.send(f'`{command}` has been disabled.')
+            return await ctx.send(f"`{command}` has been disabled.")
 
         if isinstance(error, commands.BadArgument):
             return await ctx.send(str(error))
@@ -67,7 +67,7 @@ class Handler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
-        error = getattr(error, 'original', error)
+        error = getattr(error, "original", error)
         if isinstance(error, discord.DiscordException):
             await self.handle_library_error(ctx, error)
         else:
@@ -79,13 +79,11 @@ class Handler(commands.Cog):
                 if cog and cog.has_error_handler():
                     return
 
-
             formatted = traceback.format_exception(type(error), error, error.__traceback__)
-            print(''.join(formatted))
+            print("".join(formatted))
 
             await ctx.send(
-                f"Oops, an error occurred. Sorry about that."
-                f"```py\n{''.join(formatted)}\n```"
+                f"Oops, an error occurred. Sorry about that." f"```py\n{''.join(formatted)}\n```"
             )
 
 

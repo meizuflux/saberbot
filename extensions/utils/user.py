@@ -16,10 +16,7 @@ class Favorite:
     @classmethod
     def from_json(cls, json):
         json = loads(json)
-        return cls(
-            name=json.get('name'),
-            url=json.get('url')
-        )
+        return cls(name=json.get("name"), url=json.get("url"))
 
 
 class ScoreStat:
@@ -33,10 +30,7 @@ class ScoreStat:
     @classmethod
     def from_json(cls, json):
         json = loads(json)
-        return cls(
-            total=json.get('total'),
-            ranked=json.get('ranked')
-        )
+        return cls(total=json.get("total"), ranked=json.get("ranked"))
 
 
 @dataclass
@@ -56,15 +50,15 @@ class User:
     @classmethod
     def from_json(cls, data):
         return cls(
-            id=data.get('user_id'),
-            scoresaber_id=data.get('scoresaber_id'),
-            pp=data.get('pp'),
-            change=data.get('change'),
-            favorite_song=Favorite.from_json(data.get('favorite_song', '{}')),
-            favorite_saber=Favorite.from_json(data.get('favorite_saber', '{}')),
-            play_count=ScoreStat.from_json(data.get('play_count', '{}')),
-            score=ScoreStat.from_json(data.get('score', '{}')),
-            average_accuracy=data.get('average_accuracy'),
-            headset=data.get('headset'),
-            grip=data.get('grip')
+            id=data.get("user_id"),
+            scoresaber_id=data.get("scoresaber_id"),
+            pp=data.get("pp"),
+            change=data.get("change"),
+            favorite_song=Favorite.from_json(data.get("favorite_song", "{}")),
+            favorite_saber=Favorite.from_json(data.get("favorite_saber", "{}")),
+            play_count=ScoreStat.from_json(data.get("play_count", "{}")),
+            score=ScoreStat.from_json(data.get("score", "{}")),
+            average_accuracy=data.get("average_accuracy"),
+            headset=data.get("headset"),
+            grip=data.get("grip"),
         )

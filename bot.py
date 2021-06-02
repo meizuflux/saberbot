@@ -15,7 +15,7 @@ logging.basicConfig(
     format="[{asctime}] {levelname:<7} {name}: {message}",  # you can change formatting if you want
     datefmt="%Y-%m-%d %H:%M:%S",
     style="{",
-    level=logging.INFO  # change this to logging.DEBUG if something is going wrong during startup
+    level=logging.INFO,  # change this to logging.DEBUG if something is going wrong during startup
 )
 
 
@@ -36,14 +36,15 @@ class Bot(commands.Bot):
         self.loop.create_task(self.__prep())
 
         # colors
-        self.scoresaber_color = 0xffde1a
-        self.cc_blue_color = 0x00aeef
-        self.cc_red_color = 0xee283b
+        self.scoresaber_color = 0xFFDE1A
+        self.cc_blue_color = 0x00AEEF
+        self.cc_red_color = 0xEE283B
 
     async def __prep(self):
         # misc
         headers = {
-            "User-Agent": f"Discord bot for the Cube Community discord server. discord.py version {discord.__version__}"}
+            "User-Agent": f"Discord bot for the Cube Community discord server. discord.py version {discord.__version__}"
+        }
         self.session = ClientSession(headers=headers)
         async with self.pool.acquire() as conn:
             with open(self.working_directory + "schema.sql") as f:
@@ -54,14 +55,14 @@ class Bot(commands.Bot):
         return random.choice((self.cc_red_color, self.cc_blue_color))
 
     def load_extensions(self):
-        self.load_extension('jishaku')
+        self.load_extension("jishaku")
         extensions = [
-            'extensions.stats',
-            'extensions.errorhandler',
-            'extensions.leaderboards',
-            'extensions.profile',
-            'extensions.misc',
-            'extensions.buttons'
+            "extensions.stats",
+            "extensions.errorhandler",
+            "extensions.leaderboards",
+            "extensions.profile",
+            "extensions.misc",
+            "extensions.buttons",
         ]
         for ext in extensions:
             self.load_extension(ext)
@@ -74,7 +75,7 @@ class Bot(commands.Bot):
             "ID : {0.id}".format(self.user),
             f"Guilds : {len(self.guilds)}",
             f"Users : {len(self.users)}",
-            f"Command Prefix : {self.command_prefix}"
+            f"Command Prefix : {self.command_prefix}",
         )
         for msg in message:
             logger.info(msg)

@@ -53,6 +53,7 @@ class Profile(commands.Cog):
         score_stats = data["scoreStats"]
 
         scoresaber_id = player_info["playerId"]
+        rank = player_info["rank"]
         pp = player_info["pp"]
         change = self.calc_change(player_info["rank"], player_info["history"])
         play_count = dumps(
@@ -65,20 +66,21 @@ class Profile(commands.Cog):
 
         query = """
             INSERT INTO
-                users (user_id, scoresaber_id, pp, change, play_count, score, average_accuracy)
+                users (user_id, scoresaber_id, rank, pp, change, play_count, score, average_accuracy)
             VALUES
-                ($1, $2, $3, $4, $5, $6, $7)
+                ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (user_id)
                 DO UPDATE
                     SET
                         scoresaber_id = $2,
-                        pp = $3,
-                        change = $4,
-                        play_count = $5,
-                        score = $6,
-                        average_accuracy = $7
+                        rank = $3,
+                        pp = $4,
+                        change = $5,
+                        play_count = $6,
+                        score = $7,
+                        average_accuracy = $8
             """
-        values = (user_id, scoresaber_id, pp, change, play_count, score, average_accuracy)
+        values = (user_id, scoresaber_id, rank, pp, change, play_count, score, average_accuracy)
         await self.bot.pool.execute(query, *values)
 
     @commands.command()

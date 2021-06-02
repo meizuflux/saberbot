@@ -1,5 +1,5 @@
-token: "ODQ0MjMwMzc2MDc4NDQyNTQ3.YKPYzg.32A4tqs_SwVNlAVLXQK7QpuMloo" # place your token here
-postgres_dsn: "postgres://ccbot:secret@localhost:5432/ccbot" # put your postgres dsn here: format: "postgres://user:password@host:port/database"
+token: "" # place your token here
+postgres_dsn: "" # put your postgres dsn here: format: "postgres://user:password@host:port/database"
 
 # past here is optional
 

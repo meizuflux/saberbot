@@ -1,3 +1,0 @@
-[core]
-token = "" # put your token here
-postgres_dsn = "postgres://" # put your postgres dsn here: format: "postgres://user:password@host:port/database"

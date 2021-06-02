@@ -1,0 +1,18 @@
+token: "ODQ0MjMwMzc2MDc4NDQyNTQ3.YKPYzg.32A4tqs_SwVNlAVLXQK7QpuMloo" # place your token here
+postgres_dsn: "postgres://ccbot:secret@localhost:5432/ccbot" # put your postgres dsn here: format: "postgres://user:password@host:port/database"
+
+# past here is optional
+
+# Set as many prefixes as you want, denote each line with a "- "
+prefix:
+  - "saber "
+  - "ccbot "
+
+
+# here is where you set the bots activity
+activity:
+  name: "Beat Saber" # the thing you want it to say
+  type: "playing" # playing, watching, listening, competing, and streaming are all valid.
+  url: "https://cube.community/" this field is required if you select "streaming" as the type
+
+status: "idle" # the bot's status, one of online, offline, dnd, and idle

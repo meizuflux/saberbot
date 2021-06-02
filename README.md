@@ -31,7 +31,7 @@ CREATE DATABASE ccbot OWNER ccbot;
 
 > ### 5. **Configure the bot**
 
-Fill out the config.toml.example file. When you are done, make sure to remove the `.example` from the filename otherwise the bot will not recognize it.
+Fill out the `config.yml.example` file. When you are done, make sure to remove the `.example` from the filename otherwise the bot will not recognize it.
 
 > ### 6. **Run the bot**
 
@@ -39,12 +39,8 @@ Simply run the bot with this command:
 ```bash
 python3.9 launch.py
 ```
-That's it. If you wish to change the prefix, add a `--prefix` flag when running as such:
-```bash
-python3.9 launch.py --prefix "<enter your prefix>"
-```
-The prefix defaults to `!`
-
+That's it.
+Any customization is done through the `config.yml` file.
 
 
 

@@ -1,5 +1,6 @@
 token: "" # place your token here
 postgres_dsn: "" # put your postgres dsn here: format: "postgres://user:password@host:port/database"
+# if deploying with docker and you don't change anything, it would be "postgres://postgres:secret@db:5432/bot"
 
 # past here is optional
 
@@ -13,6 +14,6 @@ prefix:
 activity:
   name: "Beat Saber" # the thing you want it to say
   type: "playing" # playing, watching, listening, competing, and streaming are all valid.
-  url: "https://cube.community/" this field is required if you select "streaming" as the type
+  url: "https://cube.community/" # this field is required if you select "streaming" as the type
 
 status: "idle" # the bot's status, one of online, offline, dnd, and idle

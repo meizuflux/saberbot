@@ -49,9 +49,8 @@ class StopButton(discord.ui.Button):
 
 
 class ProfileView(discord.ui.View):
-    def __init__(self, data: dict, *args, **kwargs):
-        self.profile_data = data
-        self.scoresaber_id = data["playerInfo"]["playerId"]
+    def __init__(self, user: User, *args, **kwargs):
+        self.user = user
         super().__init__(*args, **kwargs)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -60,31 +59,31 @@ class ProfileView(discord.ui.View):
     @property
     def profile_embed(self):
         if not hasattr(self, "_profile_embed"):
-            player_info = self.profile_data["playerInfo"]
-            score_stats = self.profile_data["scoreStats"]
+            user = self.user
             embed = discord.Embed(
-                title=f"{player_info['playerName']}'s Profile",
+                title=f"{user.name}'s Profile",
                 color=self.ctx.bot.scoresaber_color,
-                url="https://new.scoresaber.com/u/" + player_info["playerId"],
+                url="https://new.scoresaber.com/u/" + user.id,
             )
-            embed.set_thumbnail(url="https://new.scoresaber.com" + player_info["avatar"])
+            embed.set_thumbnail(url="https://new.scoresaber.com" + user.avatar)
 
-            country_url = f"[#{player_info['countryRank']:,d}](https://scoresaber.com/global/{ceil(player_info['countryRank'] / 50)}&country={player_info['country']})"
+            country_url = f"[#{user.country_rank:,d}](https://scoresaber.com/global/{ceil(user.country_rank / 50)}&country={user.country})"
             info_msg = (
-                f"**PP:** {player_info['pp']}\n"
-                f"**Rank:** [#{player_info['rank']:,d}](https://new.scoresaber.com/rankings/{ceil(player_info['rank'] / 50)})\n"
-                f"**Country Rank:** :flag_{player_info['country'].lower()}: {country_url}"
+                f"**PP:** {user.pp}\n"
+                f"**Rank:** [#{user.rank:,d}](https://new.scoresaber.com/rankings/{ceil(user.rank / 50)})\n"
+                f"**Country Rank:** :flag_{user.country.lower()}: {country_url}\n"
+                f"**7 Day Change:** {user.change}"
             )
-            if role := player_info["role"]:
+            if role := user.role:
                 info_msg += f"\n**Role:** {role}"
             embed.add_field(name="Player Info:", value=info_msg)
 
             score_msg = (
-                f"**Average Ranked Accuracy:** {score_stats['averageRankedAccuracy']:.2f}\n"
-                f"**Total Score:** {score_stats['totalScore']:,d}\n"
-                f"**Total Ranked Score:** {score_stats['totalRankedScore']:,d}\n"
-                f"**Total Play Count:** {score_stats['totalPlayCount']:,d}\n"
-                f"**Ranked Play Count:** {score_stats['rankedPlayCount']:,d}"
+                f"**Average Ranked Accuracy:** {user.ranked_accuracy:.2f}\n"
+                f"**Unranked Score:** {user.score.unranked:,d}\n"
+                f"**Ranked Score:** {user.score.ranked:,d}\n"
+                f"**Unranked Play Count:** {user.play_count.unranked:,d}\n"
+                f"**Ranked Play Count:** {user.play_count.ranked:,d}"
             )
             embed.add_field(name="Score Stats:", value=score_msg, inline=False)
             self._profile_embed = embed
@@ -103,16 +102,16 @@ class ProfileView(discord.ui.View):
                 WHERE 
                     id = $1
                 """
-            items = await bot.pool.fetchrow(query, self.scoresaber_id)
-            user = User.from_json(items)
+            items = await bot.pool.fetchrow(query, self.user.id)
+            user = User.from_psql(items)
             song = (
                 f"[{user.song.name}]({user.song.url})"
-                if user.song.url is not None
+                if user.song.name is not None
                 else "This user has not set a favorite song."
             )
             saber = (
                 f"[{user.saber.name}]({user.saber.url})"
-                if user.favorite_saber.url is not None
+                if user.saber.name is not None
                 else "This user has not set a favorite saber."
             )
             hmd = user.hmd or "This user has not set which headset they use."

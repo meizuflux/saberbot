@@ -63,7 +63,12 @@ class Handler(commands.Cog):
         if isinstance(error, commands.CommandError):
             await self.handle_command_error(ctx, error)
         else:
-            await ctx.send(str(error))
+            formatted = traceback.format_exception(type(error), error, error.__traceback__)
+            print("".join(formatted))
+
+            await ctx.send(
+                f"Oops, an error occurred. Sorry about that." f"```py\n{''.join(formatted)}\n```"
+            )
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):

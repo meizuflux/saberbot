@@ -4,13 +4,15 @@ from urllib.parse import quote
 import discord
 from discord.ext import commands
 
+from extensions.utils.user import User
+
 PROFILE_LINK_REGEX = re.compile(r"https?://(?:(?:new)\.)?scoresaber\.com/u/(?P<id>[0-9]{16,20})")
 LEADERBOARD_LINK_REGEX = re.compile(r"https?://(?:(?:new)\.)?scoresaber\.com/leaderboard/[0-9]+")
 DISCORD_MENTION_REGEX = mention_regex = re.compile(r"<@(!?)([0-9]*)>")
 API_URL = "https://new.scoresaber.com/api"
 
 
-async def scoresaber_id_from_query(ctx: commands.Context, query: str) -> dict:
+async def scoresaber_id_from_query(ctx: commands.Context, query: str) -> User:
     query = quote(query.upper())
     async with ctx.bot.session.get(API_URL + "/players/by-name/" + query) as resp:
         data = await resp.json()
@@ -20,14 +22,14 @@ async def scoresaber_id_from_query(ctx: commands.Context, query: str) -> dict:
         raise commands.BadArgument(data["error"]["message"])
 
 
-async def get_profile(ctx: commands.Context, scoresaber_id: int) -> dict:
+async def get_profile(ctx: commands.Context, scoresaber_id: int) -> User:
     url = API_URL + "/player/" + str(scoresaber_id) + "/full"
     await ctx.trigger_typing()
     async with ctx.bot.session.get(url) as resp:
         if not resp.ok:
             raise commands.BadArgument("Scoresaber returned a {0.status} status.".format(resp))
         data = await resp.json()
-    return data
+    return User.from_json(data)
 
 
 async def scoresaber_id_from_user(ctx, user: discord.User):
@@ -42,7 +44,7 @@ async def scoresaber_id_from_user(ctx, user: discord.User):
 
 
 class ScoreSaberQueryConverter(commands.Converter):
-    async def convert(self, ctx: commands.Context, query: str) -> dict:
+    async def convert(self, ctx: commands.Context, query: str) -> User:
         if query is not None:
             url_match = PROFILE_LINK_REGEX.match(query)
             if len(query) < 4 or len(query) > 31 and not url_match:

@@ -1,5 +1,4 @@
 import asyncio
-from json import dumps
 
 import discord
 from asyncpg import UniqueViolationError
@@ -7,8 +6,8 @@ from discord.ext import commands, tasks
 
 from bot import Bot
 from extensions.utils.buttons import MainButton, MiscButton, ProfileView, SettingView, StopButton
-from extensions.utils.scoresaber import ScoreSaberQueryConverter
 from extensions.utils.db import update_user_stats
+from extensions.utils.scoresaber import ScoreSaberQueryConverter
 
 
 class Profile(commands.Cog):
@@ -40,20 +39,12 @@ class Profile(commands.Cog):
                 await update_user_stats(user["snowflake"], self.bot.pool, data)
                 counter += 1
 
-    @staticmethod
-    def calc_change(now: int, history: str) -> int:
-        history = history.split(",")
-        index = 7
-        if len(history) < 7:
-            index = len(history)
-        return int(history[-index]) - now
-
     @commands.command()
     async def profile(self, ctx: commands.Context, *, query=None):
-        data: dict = await ScoreSaberQueryConverter().convert(ctx, query)
-        view = ProfileView(data=data)
+        user = await ScoreSaberQueryConverter().convert(ctx, query)
+        view = ProfileView(user=user)
         registered = await self.bot.pool.fetchval(
-            "SELECT True FROM users WHERE id = $1", data["playerInfo"]["playerId"]
+            "SELECT True FROM users WHERE id = $1", user.id
         )
         if registered is not None:
             view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
@@ -64,10 +55,12 @@ class Profile(commands.Cog):
 
     @commands.command()
     async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
+        print(user)
+        print(user.to_json())
         try:
-            await update_user_stats(ctx.author.id, self.bot.pool, user)
+            await update_user_stats(ctx.author.id, self.bot.pool, user.to_json())
         except UniqueViolationError:
-            player_id = user["playerInfo"]["playerId"]
+            player_id = user.id
             user_id = await self.bot.pool.fetchval(
                 "SELECT snowflake FROM users WHERE id = $1", player_id
             )

@@ -9,21 +9,22 @@ from matplotlib import ticker
 
 from bot import Bot
 from extensions.utils.scoresaber import ScoreSaberQueryConverter
+from extensions.utils.user import User
 
 matplotlib.use("Agg")
 
 
 @executor_function
-def generate_chart(data) -> BytesIO:
-    history = [int(point) for point in data["history"].split(",")]
-    history.append(data["rank"])
+def generate_chart(user: User) -> BytesIO:
+    history = user.history
+    history.append(user.rank)
     x_ticks = [num for num in range(len(history) + 2) if num % 2 == 0]
 
     fig, ax = plt.subplots()
 
     ax.plot(history, linewidth=7)
     ax.set_title(
-        data["playerName"] + "'s " + "Rank Change",
+        user.name + "'s " + "Rank Change",
         fontsize=30,
         fontweight="bold",
         loc="left",
@@ -56,14 +57,10 @@ class Stats(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def stats(self, ctx: commands.Context, *, query: ScoreSaberQueryConverter):
-        pass
-
-    @commands.command()
     async def chart(self, ctx: commands.Context, *, query: str = None):
         await ctx.trigger_typing()
-        data = await ScoreSaberQueryConverter().convert(ctx, query)
-        buffer = await generate_chart(data["playerInfo"])
+        user = await ScoreSaberQueryConverter().convert(ctx, query)
+        buffer = await generate_chart(user)
         file = discord.File(buffer, "chart.png")
         await ctx.send(file=file)
 

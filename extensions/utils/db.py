@@ -12,22 +12,23 @@ async def update_user_stats(snowflake: int, pool: Pool, data: dict) -> None:
             SET snowflake = $1, id = $2
         )
         INSERT INTO stats
-        VALUES ($2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (id)
         DO UPDATE SET
             id = $2,
             name = $3,
             avatar = $4,
             country = $5,
-            rank = $6,
-            country_rank = $7,
-            player_role = $8,
-            history = $9,
-            avg_ranked_acc = $10,
-            total_score = $11,
-            ranked_score = $12,
-            total_played = $13,
-            ranked_played = $14
+            pp = $6,
+            rank = $7,
+            country_rank = $8,
+            player_role = $9,
+            history = $10,
+            ranked_acc = $11,
+            total_score = $12,
+            ranked_score = $13,
+            total_played = $14,
+            ranked_played = $15
         """
     info = data["playerInfo"]
     score = data["scoreStats"]
@@ -37,6 +38,7 @@ async def update_user_stats(snowflake: int, pool: Pool, data: dict) -> None:
         info["playerName"],
         info["avatar"],
         info["country"],
+        info["pp"],
         info["rank"],
         info["countryRank"],
         info["role"],

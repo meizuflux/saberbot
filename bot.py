@@ -45,16 +45,18 @@ class Bot(commands.Bot):
         headers = {
             "User-Agent": f"Discord bot for the Cube Community discord server. discord.py version {discord.__version__}"
         }
-        self.session = ClientSession(headers=headers)
+        self.session = ClientSession(headers=headers)  # this is so aiohttp stops whining
         async with self.pool.acquire() as conn:
             with open(self.working_directory + "schema.sql") as f:
-                await conn.execute(f.read())
+                await conn.execute(f.read())  # create tables
 
     @property
     def cc_color(self):
+        """Property for getting a random Cube Community color."""
         return random.choice((self.cc_red_color, self.cc_blue_color))
 
     def load_extensions(self):
+        """Loads all the extensions of the bot."""
         self.load_extension("jishaku")
         extensions = [
             "extensions.stats",
@@ -67,7 +69,7 @@ class Bot(commands.Bot):
             self.load_extension(ext)
 
     async def on_ready(self):
-        """Lets us know when the bot is online. If you don't see this something went wrong"""
+        """Lets us know when the bot is online. If you don't see this something went wrong."""
         message = (
             "Connected to Discord",
             "Username : {0}".format(self.user),
@@ -80,5 +82,6 @@ class Bot(commands.Bot):
             logger.info(msg)
 
     async def close(self):
+        """Function that gets called when the bot is closing."""
         await self.session.close()
         await super().close()

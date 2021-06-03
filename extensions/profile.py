@@ -16,10 +16,12 @@ class Profile(commands.Cog):
         self.background_loop.start()
 
     def cog_unload(self):
+        """Function that gets called when the cog is unloaded"""
         self.background_loop.stop()
 
     @tasks.loop(minutes=15)
     async def background_loop(self):
+        """Update user stats in the background"""
         await self.bot.wait_until_ready()
         counter = 0
         async with self.bot.pool.acquire() as conn:
@@ -27,7 +29,7 @@ class Profile(commands.Cog):
             for user in users:
                 if counter > 60:
                     counter = 0
-                    await asyncio.sleep(60)
+                    await asyncio.sleep(60)  # ratelimits
                 url = "https://new.scoresaber.com/api/player/" + user["id"] + "/full"
                 async with self.bot.session.get(url) as resp:
                     if not resp.ok:
@@ -36,17 +38,17 @@ class Profile(commands.Cog):
                         print(resp.status)
                         continue
                     data = await resp.json()
-                await update_user_stats(user["snowflake"], self.bot.pool, data)
+                await update_user_stats(
+                    user["snowflake"], self.bot.pool, data
+                )  # update the user stats
                 counter += 1
 
     @commands.command()
     async def profile(self, ctx: commands.Context, *, query=None):
         user = await ScoreSaberQueryConverter().convert(ctx, query)
         view = ProfileView(user=user)
-        registered = await self.bot.pool.fetchval(
-            "SELECT True FROM users WHERE id = $1", user.id
-        )
-        if registered is not None:
+        registered = await self.bot.pool.fetchval("SELECT True FROM users WHERE id = $1", user.id)
+        if registered is not None:  # only add the buttons if the user is registered
             view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
             view.add_item(MiscButton(style=discord.ButtonStyle.green, label="Misc"))
 
@@ -57,7 +59,7 @@ class Profile(commands.Cog):
     async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
         try:
             await update_user_stats(ctx.author.id, self.bot.pool, user.to_json())
-        except UniqueViolationError:
+        except UniqueViolationError:  # someone is already registered with that scoresaber user
             player_id = user.id
             user_id = await self.bot.pool.fetchval(
                 "SELECT snowflake FROM users WHERE id = $1", player_id

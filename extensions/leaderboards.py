@@ -15,6 +15,8 @@ from extensions.utils.scoresaber import LEADERBOARD_LINK_REGEX
 
 
 class Leaderboards(commands.Cog):
+    """Extension for all sorts of leaderboards!"""
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.hash_cache = {}
@@ -26,19 +28,21 @@ class Leaderboards(commands.Cog):
         self.generate_php_session_id.stop()
 
     async def parse_song(self, query):
-        if _hash := self.hash_cache.get(query):
+        """Parse a song hash from input."""
+        if _hash := self.hash_cache.get(query):  # return it if it's cached
             return _hash
 
-        if re.match(r"([A-Z0-9]{40})", query):
+        if re.match(r"([A-Z0-9]{40})", query):  # check if the user sent a hash
             return query
 
-        if LEADERBOARD_LINK_REGEX.match(query):
+        if LEADERBOARD_LINK_REGEX.match(query):  # check against a scoresaber url
             async with self.bot.session.get(query) as resp:
                 if not resp.ok:
                     raise commands.BadArgument("Invalid leaderboard url provided.")
                 _hash = re.findall(r"<b>([A-Z0-9]{40})</b>", await resp.text())[0]
 
         if not _hash:
+            # if we're here that means its a string, not a url
             async with self.bot.session.get(
                 "https://beatsaver.com/api/search/text?q=" + quote(query)
             ) as resp:
@@ -50,16 +54,19 @@ class Leaderboards(commands.Cog):
                             break
                 if _hash is None:
                     raise commands.BadArgument("I could not find a song hash from your data.")
-        self.hash_cache[query] = _hash
+        self.hash_cache[query] = _hash  # cache it incase someone else sends the same thing
         return _hash.upper()
 
     @commands.command()
     async def leaderboard(self, ctx: commands.Context):
+        """View the top players on Scoresaber."""
         menu = LeaderboardPages(delete_message_after=True)
         await menu.start(ctx)
 
     @commands.command()
     async def song_leaderboard(self, ctx: commands.Context, page: Optional[int], *, song: str):
+        """View the leaderboard for a song.
+        You can send a scoresaber leaderboard, a hash, a beatsaver url, or something to search."""
         if not hasattr(self, "session"):
             return await ctx.send("Bot is not prepped yet, check again soon.")
         query = song.strip()
@@ -69,13 +76,15 @@ class Leaderboards(commands.Cog):
         parser.add_argument("-m", "--minimal", action="store_true")
 
         try:
-            args = parser.parse_args(query.split())
+            args = parser.parse_args(query.split())  # parse the flags
         except RuntimeError as err:
             err = str(err).strip().capitalize()
-            if err == "Argument -d/--difficulty: expected at least one argument":
+            if (
+                err == "Argument -d/--difficulty: expected at least one argument"
+            ):  # catch custom errors
                 err = "You provided the difficulty argument without providing a difficulty."
             return await ctx.send(err)
-        diffs = {
+        diffs = {  # map of common diffs
             "expert+": "9",
             "expertplus": "9",
             "expert": "7",
@@ -96,12 +105,14 @@ class Leaderboards(commands.Cog):
         _hash = await self.parse_song(query)
         if not page:
             page = 1
+        # get the url
         url = f"https://scoresaber.com/game/scores-pc.php?levelId={_hash}&difficulty={difficulty}&gameMode=SoloStandard&page={page}"
         async with self.session.get(url) as resp:
-            data = json.loads(await resp.text())
+            data = json.loads(await resp.text())  # scoresaber is weird so I have to do it manually
         url = "https://scoresaber.com/leaderboard/" + data["uid"]
         embed = discord.Embed(color=self.bot.scoresaber_color, description=data["ranked"], url=url)
 
+        # get stuff about the song
         async with self.bot.session.get(url) as lb:
             soup = BeautifulSoup(await lb.text(), "lxml")
         embed.title = soup.find("h4", {"class": "title is-5"}).find_all("a")[0].text[:256]
@@ -114,6 +125,7 @@ class Leaderboards(commands.Cog):
             if fmt := mapping.get(index):
                 embed.description += "\n" + fmt + str(i)
 
+        # start the pagination session
         pages = menus.MenuPages(
             source=SongLeaderboardSource(embed=embed, entries=data["scores"], per_page=4),
             delete_message_after=True,

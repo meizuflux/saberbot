@@ -9,6 +9,7 @@ from discord.ext import commands
 from bot import Bot
 from extensions.utils.user import User
 
+# regex for validating urls and stuff
 BEATSAVER_SONG_REGEX = re.compile(r"https?://beatsaver\.com/beatmap/(?P<key>[0-9a-zA_Z]+)")
 MODELSABER_VALIDATION_REGEX = re.compile(
     r"https?://modelsaber\.com/sabers/\?id=(?P<id>[0-9a-zA_Z]+)"
@@ -23,6 +24,8 @@ class MiscButton(discord.ui.Button):
 
 
 class MainButton(discord.ui.Button):
+    """Button that shows the main embed."""
+
     view: "ProfileView"
 
     async def callback(self, interaction: discord.Interaction):
@@ -30,6 +33,8 @@ class MainButton(discord.ui.Button):
 
 
 class StopButton(discord.ui.Button):
+    """A button that deletes the message when pressed."""
+
     def __init__(
         self,
         *,
@@ -40,6 +45,7 @@ class StopButton(discord.ui.Button):
         emoji: Optional[Union[str, discord.PartialEmoji]] = None,
         row: Optional[int] = None,
     ):
+        # we override some things so I don't have to pass in the same stuff every time
         super().__init__(
             style=style, label=label, disabled=disabled, custom_id=custom_id, emoji=emoji, row=row
         )
@@ -49,15 +55,19 @@ class StopButton(discord.ui.Button):
 
 
 class ProfileView(discord.ui.View):
+    """View that is made when the :profile: command is called."""
+
     def __init__(self, user: User, *args, **kwargs):
-        self.user = user
+        self.user = user  # storing the user for later use
         super().__init__(*args, **kwargs)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Checking that the button presser is the right person."""
         return interaction.user.id == self.ctx.author.id
 
     @property
     def profile_embed(self):
+        """Cache an embed for profile."""
         if not hasattr(self, "_profile_embed"):
             user = self.user
             embed = discord.Embed(
@@ -91,6 +101,7 @@ class ProfileView(discord.ui.View):
 
     @property
     async def misc_embed(self):
+        """Cache for the misc page"""
         if not hasattr(self, "_misc_embed"):
             bot: Bot = self.ctx.bot
             embed = discord.Embed(title="Misc")
@@ -145,21 +156,26 @@ class SettingButton(discord.ui.Button["SettingView"]):
 
 
 class SettingView(discord.ui.View):
+    """A view that gets called with the :set: command."""
+
     editable = ("favorite_song", "favorite_saber", "headset", "grip")
 
     def __init__(self, ctx: commands.Context):
         super().__init__()
         self.ctx = ctx
+        # add buttons and format them
         for i in self.editable:
             self.add_item(SettingButton(i, label=i.replace("_", " ").title()))
         self.add_item(StopButton())
 
     @staticmethod
     async def send_confirmed(interaction: discord.Interaction, message: str) -> None:
+        """Shortcut to followups."""
         webhook = interaction.followup
         await webhook.send(message, ephemeral=True)
 
     async def update(self, item, value):
+        """Helper method to set an item."""
         pool = self.ctx.bot.pool
         query = f"""
             UPDATE
@@ -172,6 +188,7 @@ class SettingView(discord.ui.View):
         await pool.execute(query, value, self.ctx.author.id)
 
     async def set_favorite_song(self, interaction: discord.Interaction):
+        """Function for setting favorite song and validating the url."""
         ctx = self.ctx
         await interaction.response.send_message(
             "Please send the BeatSaver url of your favorite song.", ephemeral=True
@@ -181,30 +198,33 @@ class SettingView(discord.ui.View):
                 "message",
                 check=lambda m: m.author == ctx.author and m.channel == ctx.channel,
                 timeout=60,
-            )
+            )  # wait for a message
         except TimeoutError:
             await interaction.response.send_message("You did not respond in time.", empheral=True)
         else:
             content = response.content.lower().strip("<>")
-            if not (key_match := BEATSAVER_SONG_REGEX.fullmatch(content)):
+            if not (key_match := BEATSAVER_SONG_REGEX.fullmatch(content)):  # match the url
                 await interaction.followup.send("Please send a BeatSaver url.", ephemeral=True)
             else:
                 key = key_match["key"]
                 url = "https://beatsaver.com/api/maps/detail/" + key
                 async with ctx.bot.session.get(url) as resp:
                     if not resp.ok:
+                        # catch a web error
                         return await interaction.followup.send(
                             f"Something went wrong: HTTP Error code {resp.status}", ephemeral=True
                         )
                     song_name = (await resp.json())["name"]
                     song_url = "https://beatsaver.com/beatmap/" + key
                 json = dumps({"name": song_name, "url": song_url})
+                # confirm it
                 await self.update("song", json)
                 await self.send_confirmed(
                     interaction, f"I have set your favorite song to [`{song_name}`]({song_url})"
                 )
 
     async def set_favorite_saber(self, interaction: discord.Interaction):
+        """Function for setting your favorite saber."""
         ctx = self.ctx
         await interaction.response.send_message(
             "Please send the ModelSaber url of your favorite saber.", ephemeral=True
@@ -247,6 +267,7 @@ class SettingView(discord.ui.View):
                 )
 
     async def set_headset(self, interaction: discord.Interaction):
+        """Function that starts a guided headset selection"""
         embed = discord.Embed(
             description="Please click the button that resembles which headset you prefer to use.",
             color=self.ctx.bot.cc_color,
@@ -256,6 +277,7 @@ class SettingView(discord.ui.View):
         )
 
     async def set_grip(self, interaction: discord.Interaction):
+        """Function for setting grip"""
         ctx = self.ctx
         bot = ctx.bot
         await interaction.response.send_message(
@@ -278,6 +300,8 @@ class SettingView(discord.ui.View):
 
 
 class HeadsetButton(discord.ui.Button["HeadsetView"]):
+    """Button that sets your preferred headset."""
+
     def __init__(
         self,
         *,
@@ -315,6 +339,7 @@ class HeadsetView(discord.ui.View):
 
     def __init__(self, parent: SettingView):
         super().__init__()
+        # add buttons
         for i in self.headsets:
             self.add_item(HeadsetButton(label=i))
         self.parent = parent

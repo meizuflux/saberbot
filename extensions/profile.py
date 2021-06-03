@@ -55,8 +55,6 @@ class Profile(commands.Cog):
 
     @commands.command()
     async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
-        print(user)
-        print(user.to_json())
         try:
             await update_user_stats(ctx.author.id, self.bot.pool, user.to_json())
         except UniqueViolationError:

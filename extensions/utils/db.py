@@ -4,16 +4,9 @@ from asyncpg import Pool
 
 async def update_user_stats(snowflake: int, pool: Pool, data: dict) -> None:
     query = """
-        WITH pre AS (
-            INSERT INTO users (snowflake, id)
-            VALUES ($1, $2)
-            ON CONFLICT (snowflake)
-            DO UPDATE
-            SET snowflake = $1, id = $2
-        )
-        INSERT INTO stats
-        VALUES ($2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-        ON CONFLICT (id)
+        INSERT INTO users (snowflake, id, name, avatar, country, pp, rank, country_rank, player_role, history, ranked_acc, total_score, ranked_score, total_played, ranked_played)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        ON CONFLICT (snowflake)
         DO UPDATE SET
             id = $2,
             name = $3,

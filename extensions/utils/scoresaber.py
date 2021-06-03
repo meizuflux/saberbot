@@ -33,14 +33,14 @@ async def get_profile(ctx: commands.Context, scoresaber_id: int) -> User:
 
 
 async def scoresaber_id_from_user(ctx, user: discord.User):
-    scoresaber_id = await ctx.bot.pool.fetchval(
-        "SELECT id FROM users WHERE snowflake = $1", user.id
+    data = await ctx.bot.pool.fetchrow(
+        "SELECT * FROM users WHERE snowflake = $1", user.id
     )
-    if scoresaber_id is None:
+    if data is None:
         raise commands.BadArgument(
             "This user is not registered." if user != ctx.author else "You are not registered."
         )
-    return await get_profile(ctx, scoresaber_id)
+    return User.from_psql(data)
 
 
 class ScoreSaberQueryConverter(commands.Converter):

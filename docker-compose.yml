@@ -18,7 +18,8 @@ services:
     bot: # the bot service
         build: .
         ports:
-            - 81:81 
+            - 5431:5431
         depends_on: # this makes it so it fires after postgres is ready
             db:
                 condition: service_healthy
+        restart: on-failure

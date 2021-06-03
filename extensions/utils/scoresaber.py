@@ -32,7 +32,7 @@ async def get_profile(ctx: commands.Context, scoresaber_id: int) -> dict:
 
 async def scoresaber_id_from_user(ctx, user: discord.User):
     scoresaber_id = await ctx.bot.pool.fetchval(
-        "SELECT scoresaber_id FROM users WHERE user_id = $1", user.id
+        "SELECT id FROM users WHERE snowflake = $1", user.id
     )
     if scoresaber_id is None:
         raise commands.BadArgument(

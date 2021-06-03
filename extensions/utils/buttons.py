@@ -97,7 +97,7 @@ class ProfileView(discord.ui.View):
             embed = discord.Embed(title="Misc")
             query = """
                 SELECT
-                    favorite_song, favorite_saber, headset, grip
+                    song, saber, hmd, grip
                 FROM 
                     users 
                 WHERE 
@@ -106,21 +106,21 @@ class ProfileView(discord.ui.View):
             items = await bot.pool.fetchrow(query, self.scoresaber_id)
             user = User.from_json(items)
             song = (
-                f"[{user.favorite_song.name}]({user.favorite_song.url})"
-                if user.favorite_song.url is not None
+                f"[{user.song.name}]({user.song.url})"
+                if user.song.url is not None
                 else "This user has not set a favorite song."
             )
             saber = (
-                f"[{user.favorite_saber.name}]({user.favorite_saber.url})"
+                f"[{user.saber.name}]({user.saber.url})"
                 if user.favorite_saber.url is not None
                 else "This user has not set a favorite saber."
             )
-            headset = user.headset or "This user has not set which headset they use."
+            hmd = user.hmd or "This user has not set which headset they use."
             grip = user.grip or "This user has not specified which grip they use."
             embed.description = (
                 f"**Favorite Song:** {song}\n"
                 f"**Favorite Saber:** {saber}\n"
-                f"**Headset:** {headset}\n"
+                f"**Headset:** {hmd}\n"
                 f"**Grip:** {grip}"
             )
             self._misc_embed: discord.Embed = embed
@@ -168,7 +168,7 @@ class SettingView(discord.ui.View):
             SET
                 {item} = $1
             WHERE
-                user_id = $2
+                snowflake = $2
             """
         await pool.execute(query, value, self.ctx.author.id)
 
@@ -200,7 +200,7 @@ class SettingView(discord.ui.View):
                     song_name = (await resp.json())["name"]
                     song_url = "https://beatsaver.com/beatmap/" + key
                 json = dumps({"name": song_name, "url": song_url})
-                await self.update("favorite_song", json)
+                await self.update("song", json)
                 await self.send_confirmed(
                     interaction, f"I have set your favorite song to [`{song_name}`]({song_url})"
                 )
@@ -242,7 +242,7 @@ class SettingView(discord.ui.View):
                         break
                     saber_url = "https://modelsaber.com/Sabers/?id=" + _id
                 json = dumps({"name": saber_name, "url": saber_url})
-                await self.update("favorite_saber", json)
+                await self.update("saber", json)
                 await self.send_confirmed(
                     interaction, f"I have set your favorite saber to [`{saber_name}`]({saber_url})"
                 )
@@ -296,7 +296,7 @@ class HeadsetButton(discord.ui.Button["HeadsetView"]):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        await self.view.parent.update("headset", self.label)
+        await self.view.parent.update("hmd", self.label)
         await interaction.response.send_message(
             f"I set your preferred headset to `{self.label}`", ephemeral=True
         )

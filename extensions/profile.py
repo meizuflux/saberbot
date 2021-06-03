@@ -8,6 +8,7 @@ from discord.ext import commands, tasks
 from bot import Bot
 from extensions.utils.buttons import MainButton, MiscButton, ProfileView, SettingView, StopButton
 from extensions.utils.scoresaber import ScoreSaberQueryConverter
+from extensions.utils.db import update_user_stats
 
 
 class Profile(commands.Cog):
@@ -23,13 +24,12 @@ class Profile(commands.Cog):
         await self.bot.wait_until_ready()
         counter = 0
         async with self.bot.pool.acquire() as conn:
-            users = await conn.fetch("SELECT user_id, scoresaber_id FROM users")
+            users = await conn.fetch("SELECT snowflake, id FROM users")
             for user in users:
                 if counter > 60:
                     counter = 0
                     await asyncio.sleep(60)
-                _id = user["scoresaber_id"]
-                url = "https://new.scoresaber.com/api/player/" + _id + "/full"
+                url = "https://new.scoresaber.com/api/player/" + user["id"] + "/full"
                 async with self.bot.session.get(url) as resp:
                     if not resp.ok:
                         print(resp)
@@ -37,7 +37,7 @@ class Profile(commands.Cog):
                         print(resp.status)
                         continue
                     data = await resp.json()
-                await self.upsert_user_from_data(user["user_id"], data)
+                await update_user_stats(user["snowflake"], self.bot.pool, data)
                 counter += 1
 
     @staticmethod
@@ -48,47 +48,12 @@ class Profile(commands.Cog):
             index = len(history)
         return int(history[-index]) - now
 
-    async def upsert_user_from_data(self, user_id: int, data: dict):
-        player_info = data["playerInfo"]
-        score_stats = data["scoreStats"]
-
-        scoresaber_id = player_info["playerId"]
-        rank = player_info["rank"]
-        pp = player_info["pp"]
-        change = self.calc_change(player_info["rank"], player_info["history"])
-        play_count = dumps(
-            {"total": score_stats["totalPlayCount"], "ranked": score_stats["rankedPlayCount"]}
-        )
-        score = dumps(
-            {"total": score_stats["totalScore"], "ranked": score_stats["totalRankedScore"]}
-        )
-        average_accuracy = score_stats["averageRankedAccuracy"]
-
-        query = """
-            INSERT INTO
-                users (user_id, scoresaber_id, rank, pp, change, play_count, score, average_accuracy)
-            VALUES
-                ($1, $2, $3, $4, $5, $6, $7, $8)
-            ON CONFLICT (user_id)
-                DO UPDATE
-                    SET
-                        scoresaber_id = $2,
-                        rank = $3,
-                        pp = $4,
-                        change = $5,
-                        play_count = $6,
-                        score = $7,
-                        average_accuracy = $8
-            """
-        values = (user_id, scoresaber_id, rank, pp, change, play_count, score, average_accuracy)
-        await self.bot.pool.execute(query, *values)
-
     @commands.command()
     async def profile(self, ctx: commands.Context, *, query=None):
         data: dict = await ScoreSaberQueryConverter().convert(ctx, query)
         view = ProfileView(data=data)
         registered = await self.bot.pool.fetchval(
-            "SELECT True FROM users WHERE scoresaber_id = $1", data["playerInfo"]["playerId"]
+            "SELECT True FROM users WHERE id = $1", data["playerInfo"]["playerId"]
         )
         if registered is not None:
             view.add_item(MainButton(style=discord.ButtonStyle.blurple, label="Stats"))
@@ -100,11 +65,11 @@ class Profile(commands.Cog):
     @commands.command()
     async def register(self, ctx: commands.Context, *, user: ScoreSaberQueryConverter):
         try:
-            await self.upsert_user_from_data(ctx.author.id, user)
+            await update_user_stats(ctx.author.id, self.bot.pool, user)
         except UniqueViolationError:
             player_id = user["playerInfo"]["playerId"]
             user_id = await self.bot.pool.fetchval(
-                "SELECT user_id FROM users WHERE scoresaber_id = $1", player_id
+                "SELECT snowflake FROM users WHERE id = $1", player_id
             )
             return await ctx.send(
                 f"{(await self.bot.fetch_user(user_id)).mention} already has registered themselves with this user.",

@@ -60,7 +60,7 @@ class Stats(commands.Cog):
         pass
 
     @commands.command()
-    async def chart(self, ctx: commands.Context, *, query: str=None):
+    async def chart(self, ctx: commands.Context, *, query: str = None):
         await ctx.trigger_typing()
         data = await ScoreSaberQueryConverter().convert(ctx, query)
         buffer = await generate_chart(data["playerInfo"])

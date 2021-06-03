@@ -62,7 +62,6 @@ class Bot(commands.Bot):
             "extensions.leaderboards",
             "extensions.profile",
             "extensions.misc",
-            "extensions.buttons",
         ]
         for ext in extensions:
             self.load_extension(ext)

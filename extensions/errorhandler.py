@@ -72,10 +72,12 @@ class Handler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
+        """Function that gets called when a command error occurs"""
         error = getattr(error, "original", error)
         if isinstance(error, discord.DiscordException):
             await self.handle_library_error(ctx, error)
         else:
+            # ignore errors that should be handled
             if ctx.command:
                 if ctx.command.has_error_handler():
                     return

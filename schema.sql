@@ -21,3 +21,6 @@ CREATE TABLE IF NOT EXISTS users (
     total_played INT,
     ranked_played INT
 );
+
+CREATE INDEX uid ON users (snowflake);
+CREATE INDEX playerid ON users (id)

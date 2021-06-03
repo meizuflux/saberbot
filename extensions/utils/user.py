@@ -9,11 +9,15 @@ from extensions.utils.__init__ import find_change
 
 @dataclass
 class Favorite:
+    """Class for favorites."""
+
     name: str
     url: str
 
 
 class ScoreStat:
+    """Class for calculating stats"""
+
     def __init__(self, total: int, ranked: int):
         self.total = total
         self.ranked = ranked
@@ -24,6 +28,8 @@ class ScoreStat:
 
 @dataclass
 class User:
+    """Class that represents a serialized user."""
+
     snowflake: Optional[int]
     id: str
     name: str
@@ -47,6 +53,7 @@ class User:
 
     @classmethod
     def from_psql(cls, data: Record) -> "User":
+        """Load the class from the db."""
         history = data.get("history")
 
         song = loads(data.get("song", {}))
@@ -70,11 +77,12 @@ class User:
             song=Favorite(song.get("name"), song.get("url")),
             saber=Favorite(saber.get("name"), saber.get("url")),
             hmd=data.get("hmd"),
-            grip=data.get("grip")
+            grip=data.get("grip"),
         )
 
     @classmethod
     def from_json(cls, data: dict) -> "User":
+        """Loading an instance from Scoresaber"""
         info = data["playerInfo"]
         score = data["scoreStats"]
 
@@ -98,7 +106,7 @@ class User:
             song=None,
             saber=None,
             hmd=None,
-            grip=None
+            grip=None,
         )
 
     def to_json(self) -> dict:

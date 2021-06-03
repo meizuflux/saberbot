@@ -1,8 +1,8 @@
-from discord.ext import commands
 from asyncpg import Pool
 
 
 async def update_user_stats(snowflake: int, pool: Pool, data: dict) -> None:
+    """Function for updating user stats."""
     query = """
         INSERT INTO users (snowflake, id, name, avatar, country, pp, rank, country_rank, player_role, history, ranked_acc, total_score, ranked_score, total_played, ranked_played)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)

@@ -1,3 +1,4 @@
+"""A bunch of garbage stuff that I'm not going to comment because it's so bad"""
 from collections import defaultdict
 
 import discord

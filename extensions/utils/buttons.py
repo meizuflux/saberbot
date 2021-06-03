@@ -101,7 +101,7 @@ class ProfileView(discord.ui.View):
                 FROM 
                     users 
                 WHERE 
-                    scoresaber_id = $1
+                    id = $1
                 """
             items = await bot.pool.fetchrow(query, self.scoresaber_id)
             user = User.from_json(items)

@@ -42,9 +42,9 @@ class User:
     play_count: ScoreStat
     score: ScoreStat
     average_accuracy: float
-    favorite_song: Favorite
-    favorite_saber: Favorite
-    headset: str
+    song: Favorite
+    saber: Favorite
+    hmd: str
     grip: str
 
     @classmethod
@@ -54,11 +54,11 @@ class User:
             scoresaber_id=data.get("scoresaber_id"),
             pp=data.get("pp"),
             change=data.get("change"),
-            favorite_song=Favorite.from_json(data.get("favorite_song", "{}")),
-            favorite_saber=Favorite.from_json(data.get("favorite_saber", "{}")),
+            song=Favorite.from_json(data.get("song", "{}")),
+            saber=Favorite.from_json(data.get("saber", "{}")),
             play_count=ScoreStat.from_json(data.get("play_count", "{}")),
             score=ScoreStat.from_json(data.get("score", "{}")),
             average_accuracy=data.get("average_accuracy"),
-            headset=data.get("headset"),
+            hmd=data.get("hmd"),
             grip=data.get("grip"),
         )

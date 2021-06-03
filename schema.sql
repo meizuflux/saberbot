@@ -8,8 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS stats (
-    /* playerInfo */
-    id VARCHAR PRIMARY KEY REFERENCES users.id ON DELETE CASCADE,
+    id VARCHAR UNIQUE REFERENCES users (id) ON DELETE CASCADE,
     name TEXT,
     avatar VARCHAR,
     country CHAR(2),
@@ -18,12 +17,9 @@ CREATE TABLE IF NOT EXISTS stats (
     player_role TEXT DEFAULT null,
     history BIGINT[],
 
-    /* scoreStats */
     avg_ranked_acc DOUBLE PRECISION, 
     total_score BIGINT,
     ranked_score BIGINT,
     total_played INT,
     ranked_played INT
-);
-
-CREATE INDEX scoresaber_id ON users (id)
+)
